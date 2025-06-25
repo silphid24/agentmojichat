@@ -16,7 +16,13 @@ from app.api.v1.router import api_router
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
+    
+    # Initialize agent system
+    from app.agents.manager import agent_manager
+    await agent_manager.initialize_default_agents()
+    
     yield
+    
     logger.info("Shutting down application")
 
 
