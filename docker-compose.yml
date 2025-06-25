@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: moji-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - ./.env:/app/.env
+    environment:
+      - DATABASE_URL=postgresql://moji:moji123@postgres:5432/moji_db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - moji-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: moji-postgres
+    environment:
+      POSTGRES_USER: moji
+      POSTGRES_PASSWORD: moji123
+      POSTGRES_DB: moji_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - moji-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: moji-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - moji-network
+
+volumes:
+  postgres_data:
+
+networks:
+  moji-network:
+    driver: bridge

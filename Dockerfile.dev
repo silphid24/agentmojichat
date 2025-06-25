@@ -1,0 +1,45 @@
+# Development Dockerfile with additional tools
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies and development tools
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    git \
+    curl \
+    vim \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements file
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install additional development dependencies
+RUN pip install --no-cache-dir \
+    ipython \
+    ipdb \
+    pytest-watch \
+    httpie
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Create non-root user for development
+RUN useradd -m -s /bin/bash moji && \
+    chown -R moji:moji /app
+
+USER moji
+
+# Expose port
+EXPOSE 8000
+
+# Default command
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
