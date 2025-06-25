@@ -109,3 +109,8 @@ scratch/
 
 # Windows Zone Identifier files
 *:Zone.Identifier
+
+# Data
+data/
+*.faiss
+*.pkl
