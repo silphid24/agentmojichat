@@ -1,0 +1,50 @@
+# Task ID: 3
+# Title: FastAPI 기본 서버 구조 구축
+# Status: pending
+# Dependencies: 1, 2
+# Priority: high
+# Description: FastAPI를 사용하여 MOJI AI Agent MVP의 기본 웹 서버를 구축합니다. 간단하고 실용적인 구조로 빠른 개발을 지원합니다.
+# MVP Details:
+1. [ ] 기본 프로젝트 구조
+   - [ ] app/ 메인 디렉토리
+   - [ ] app/api/ (API 엔드포인트)
+   - [ ] app/core/ (설정 및 유틸리티)
+   - [ ] app/models/ (Pydantic 모델)
+2. [ ] FastAPI 기본 설정
+   - [ ] main.py 작성
+   - [ ] 기본 CORS 설정
+   - [ ] 글로벌 예외 핸들러
+3. [ ] 필수 설정
+   - [ ] .env 파일 기반 설정
+   - [ ] 기본 데이터베이스 연결
+4. [ ] 핵심 엔드포인트
+   - [ ] Health check (/health)
+   - [ ] Chat API (/v1/chat)
+   - [ ] 기본 인증 엔드포인트
+5. [ ] 기본 모델
+   - [ ] Chat 요청/응답 모델
+   - [ ] 에러 응답 모델
+   - [ ] 사용자 모델
+
+# Future Development (상용화 단계):
+- 애플리케이션 팩토리 패턴
+- 고급 미들웨어 (요청 ID, 로깅, 메트릭)
+- API 버전닝
+- 의존성 주입 구조
+- 페이지네이션
+- Rate Limiting
+- WebSocket 지원
+
+# MVP Test Strategy:
+1. [ ] 기본 서버 테스트
+   - [ ] FastAPI 시작 확인
+   - [ ] /docs 접속 확인
+   - [ ] Health check 작동
+2. [ ] API 테스트
+   - [ ] Chat API 기본 동작
+   - [ ] 에러 핸들링 확인
+   - [ ] DB 연결 테스트
+3. [ ] 통합 테스트
+   - [ ] Docker에서 실행
+   - [ ] 기본 시나리오 동작
+   - [ ] Postman 테스트

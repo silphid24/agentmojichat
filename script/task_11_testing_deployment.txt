@@ -1,0 +1,49 @@
+# Task ID: 11
+# Title: 테스트 자동화 및 Kubernetes 배포
+# Status: pending
+# Dependencies: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+# Priority: high
+# Description: MVP를 위한 기본 테스트와 간단한 배포 프로세스를 구축합니다. Docker를 활용한 배포와 기본 CI/CD를 설정합니다.
+# MVP Details:
+1. [ ] 기본 테스트 설정
+   - [ ] pytest 설치 및 설정
+   - [ ] 단위 테스트 작성
+   - [ ] 기본 통합 테스트
+   - [ ] 테스트 실행 스크립트
+2. [ ] GitHub Actions CI
+   - [ ] 기본 워크플로우
+   - [ ] 테스트 자동 실행
+   - [ ] Docker 이미지 빌드
+3. [ ] Docker 배포
+   - [ ] Docker Compose 프로덕션 설정
+   - [ ] 환경 변수 관리
+   - [ ] 기본 헬스체크
+4. [ ] 배포 가이드
+   - [ ] README 배포 절차
+   - [ ] 필수 환경 변수 문서
+   - [ ] 트러블슈팅 가이드
+
+# Future Development (상용화 단계):
+- Kubernetes 배포
+- Helm Charts
+- 고급 CI/CD (ArgoCD)
+- 성능 테스트 (Locust)
+- E2E 테스트 (Playwright)
+- 자동 스케일링
+- Blue-Green/Canary 배포
+- 모니터링 통합
+- 백업/복구 자동화
+
+# MVP Test Strategy:
+1. [ ] 테스트 실행
+   - [ ] 단위 테스트 통과
+   - [ ] 기본 통합 테스트
+   - [ ] 테스트 커버리지 확인
+2. [ ] CI 테스트
+   - [ ] GitHub Actions 동작
+   - [ ] 자동 테스트 실행
+   - [ ] Docker 빌드 성공
+3. [ ] 배포 테스트
+   - [ ] Docker Compose 실행
+   - [ ] 헬스체크 확인
+   - [ ] 기본 동작 확인

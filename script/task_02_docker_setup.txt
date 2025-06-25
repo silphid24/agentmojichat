@@ -1,0 +1,49 @@
+# Task ID: 2
+# Title: Docker 및 Docker Compose 환경 구성
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: MOJI AI Agent MVP를 위한 간단한 Docker 개발 환경을 구성합니다. 개발에 필요한 최소한의 서비스만 컨테이너로 실행합니다.
+# MVP Details:
+1. [ ] 기본 프로젝트 구조
+   - [ ] /app (애플리케이션 코드)
+   - [ ] /docker (Docker 파일)
+   - [ ] 기본 설정 파일
+2. [ ] 간단한 Dockerfile
+   - [ ] Python 3.11 베이스 이미지
+   - [ ] 필수 패키지만 설치
+   - [ ] requirements.txt 복사 및 설치
+3. [ ] 개발용 docker-compose.yml
+   - [ ] FastAPI 앱 서비스
+   - [ ] PostgreSQL 데이터베이스
+   - [ ] Redis (선택사항)
+4. [ ] 개발 편의 기능
+   - [ ] 볼륨 마운트 (핫 리로드)
+   - [ ] .env 파일 설정
+   - [ ] 기본 네트워크 구성
+5. [ ] 기본 스크립트
+   - [ ] start.sh (시작 스크립트)
+   - [ ] stop.sh (종료 스크립트)
+
+# Future Development (상용화 단계):
+- 멀티스테이지 빌드
+- 프로덕션 최적화
+- Kubernetes 마이그레이션
+- Nginx 리버스 프록시
+- Chroma DB 클러스터
+- 환경별 설정 분리
+- 보안 강화 (비루트 사용자)
+- 백업/복구 자동화
+
+# MVP Test Strategy:
+1. [ ] 기본 빌드 테스트
+   - [ ] Docker 이미지 빌드 성공
+   - [ ] 컨테이너 실행 확인
+2. [ ] Docker Compose 테스트
+   - [ ] 서비스 시작 확인
+   - [ ] 앱-DB 연결 테스트
+   - [ ] 핫 리로드 작동 확인
+3. [ ] 개발 환경 검증
+   - [ ] 로컬 개발 가능 여부
+   - [ ] 로그 확인
+   - [ ] 기본 동작 테스트
