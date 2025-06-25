@@ -1,0 +1,43 @@
+# Core
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pydantic==2.7.4
+pydantic-settings==2.3.3
+python-multipart==0.0.9
+
+# Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+PyJWT==2.8.0
+
+# Database
+sqlalchemy==2.0.30
+asyncpg==0.29.0
+redis==5.0.4
+
+# LLM & AI
+langchain==0.2.5
+langchain-community==0.2.5
+langchain-core==0.2.5
+langsmith==0.1.77
+langgraph==0.1.5
+langchain-openai==0.1.8
+
+# Vector Store
+chromadb==0.5.0
+
+# HTTP Client
+httpx==0.27.0
+aiohttp==3.9.5
+
+# Development
+pytest==8.2.2
+pytest-asyncio==0.23.7
+black==24.4.2
+ruff==0.4.9
+
+# Logging & Monitoring
+structlog==24.2.0
+
+# Environment
+python-dotenv==1.0.1

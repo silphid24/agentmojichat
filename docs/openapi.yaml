@@ -1,0 +1,274 @@
+openapi: 3.0.3
+info:
+  title: MOJI AI Agent API
+  description: Multi-platform AI Assistant API
+  version: 1.0.0
+  contact:
+    name: MOJI Development Team
+    email: dev@moji.ai
+    
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.moji.ai
+    description: Production server
+
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Check if the service is running
+      tags:
+        - System
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+                
+  /v1/auth/token:
+    post:
+      summary: Get Access Token
+      description: Authenticate and receive JWT token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+                
+  /v1/chat/completions:
+    post:
+      summary: Create Chat Completion
+      description: Send a message and receive AI response
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Chat completion created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+                
+  /v1/chat/sessions/{session_id}:
+    get:
+      summary: Get Chat History
+      description: Retrieve chat history for a session
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chat history retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatHistoryResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+          
+    TokenRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+          
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          default: "bearer"
+        expires_in:
+          type: integer
+          description: Token expiration time in seconds
+          
+    ChatRequest:
+      type: object
+      required:
+        - messages
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        model:
+          type: string
+          description: Model to use (optional, uses default if not specified)
+          example: "deepseek-r1"
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          default: 0.7
+        max_tokens:
+          type: integer
+          minimum: 1
+          maximum: 4096
+          default: 1024
+        session_id:
+          type: string
+          description: Session ID for context continuity
+          
+    Message:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: ["system", "user", "assistant"]
+        content:
+          type: string
+          
+    ChatResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique completion ID
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              message:
+                $ref: '#/components/schemas/Message'
+              index:
+                type: integer
+              finish_reason:
+                type: string
+                enum: ["stop", "length", "error"]
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+            total_tokens:
+              type: integer
+        created:
+          type: integer
+          description: Unix timestamp
+          
+    ChatHistoryResponse:
+      type: object
+      properties:
+        session_id:
+          type: string
+        messages:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Message'
+              - type: object
+                properties:
+                  timestamp:
+                    type: string
+                    format: date-time
+                    
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            code:
+              type: string
+            details:
+              type: object
