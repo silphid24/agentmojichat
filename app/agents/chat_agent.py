@@ -42,8 +42,15 @@ Current context:
     
     async def initialize(self) -> None:
         """Initialize the chat agent"""
-        # LLM will be injected from LLM router (task_05)
-        # For now, we'll create a mock chain
+        # Get LLM from router
+        from app.llm.router import llm_router
+        
+        # Initialize router if needed
+        if not llm_router.current_provider:
+            await llm_router.initialize()
+        
+        # Get LangChain model
+        self.llm = await llm_router.get_langchain_model()
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", self.system_prompt.format(
@@ -54,9 +61,14 @@ Current context:
             ("human", "{input}")
         ])
         
-        # Chain will be created when LLM is available
-        self.chain = None
-        logger.info("Chat agent initialized (waiting for LLM)")
+        # Create chain
+        self.chain = LLMChain(
+            llm=self.llm,
+            prompt=prompt,
+            memory=self.memory
+        )
+        
+        logger.info(f"Chat agent initialized with LLM: {llm_router.config.provider}")
     
     async def process(self, messages: List[BaseMessage]) -> BaseMessage:
         """Process messages and return response"""
@@ -88,9 +100,18 @@ Current context:
             return AIMessage(content="I'm sorry, I encountered an error processing your message.")
     
     async def _generate_response(self, input_text: str) -> str:
-        """Generate response (MVP: echo for testing)"""
-        # TODO: Replace with actual LLM call
-        return f"I received your message: '{input_text}'. This is a placeholder response from MOJI."
+        """Generate response using LLM"""
+        if not self.chain:
+            # Fallback if chain not initialized
+            return f"I received your message: '{input_text}'. The LLM is not yet initialized."
+        
+        try:
+            # Use the chain to generate response
+            response = await self.chain.arun(input=input_text)
+            return response
+        except Exception as e:
+            logger.error(f"LLM generation error: {e}")
+            return "I apologize, but I encountered an error generating a response."
     
     def add_tool(self, tool: Any) -> None:
         """Add a tool to the agent"""

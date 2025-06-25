@@ -1,34 +1,34 @@
 # Task ID: 5
 # Title: LLM Router 구현 (동적 모델 선택)
-# Status: pending
+# Status: completed
 # Dependencies: 3, 4
 # Priority: high
 # Description: MVP를 위한 확장 가능한 LLM 연결 관리자를 구현합니다. 기본적으로 DeepSeek API (deepseek-r1)를 사용하며, 환경 변수를 통해 다양한 LLM 프로바이더와 모델을 지원합니다.
 # MVP Details:
-1. [ ] LLM 프로바이더 추상화 레이어
-   - [ ] BaseLLMProvider 인터페이스 정의
-   - [ ] DeepSeekProvider 구현 (기본값)
-   - [ ] OpenAIProvider 구현
-   - [ ] 환경 변수 기반 프로바이더 선택
-2. [ ] DeepSeek API 클라이언트 설정
-   - [ ] API 키 관리 (환경 변수: LLM_API_KEY)
-   - [ ] 기본 모델 설정 (deepseek-r1)
-   - [ ] API 엔드포인트 설정 (환경 변수: LLM_API_BASE)
-   - [ ] 연결 테스트
-3. [ ] 기본 LLM 래퍼 클래스
-   - [ ] 프로바이더 동적 로딩
-   - [ ] 통합 요청/응답 인터페이스
-   - [ ] 에러 핸들링
-   - [ ] 재시도 로직 (3회)
-4. [ ] 환경 변수 기반 설정
-   - [ ] LLM_PROVIDER (deepseek, openai, anthropic, custom)
-   - [ ] LLM_MODEL (deepseek-r1, gpt-3.5-turbo 등)
-   - [ ] LLM_API_BASE (커스텀 엔드포인트)
-   - [ ] LLM_API_KEY (인증 키)
-5. [ ] 기본 파라미터 설정
-   - [ ] 온도(temperature) 설정
-   - [ ] 최대 토큰 제한
-   - [ ] 타임아웃 설정
+1. [x] LLM 프로바이더 추상화 레이어
+   - [x] BaseLLMProvider 인터페이스 정의
+   - [x] DeepSeekProvider 구현 (기본값)
+   - [x] OpenAIProvider 구현
+   - [x] 환경 변수 기반 프로바이더 선택
+2. [x] DeepSeek API 클라이언트 설정
+   - [x] API 키 관리 (환경 변수: LLM_API_KEY)
+   - [x] 기본 모델 설정 (deepseek-r1)
+   - [x] API 엔드포인트 설정 (환경 변수: LLM_API_BASE)
+   - [x] 연결 테스트
+3. [x] 기본 LLM 래퍼 클래스
+   - [x] 프로바이더 동적 로딩
+   - [x] 통합 요청/응답 인터페이스
+   - [x] 에러 핸들링
+   - [x] 재시도 로직 (3회)
+4. [x] 환경 변수 기반 설정
+   - [x] LLM_PROVIDER (deepseek, openai, anthropic, custom)
+   - [x] LLM_MODEL (deepseek-r1, gpt-3.5-turbo 등)
+   - [x] LLM_API_BASE (커스텀 엔드포인트)
+   - [x] LLM_API_KEY (인증 키)
+5. [x] 기본 파라미터 설정
+   - [x] 온도(temperature) 설정
+   - [x] 최대 토큰 제한
+   - [x] 타임아웃 설정
 
 # Future Development (상용화 단계):
 - 다중 모델 지원 (GPT-4, Claude, 로컬 모델)
@@ -41,22 +41,22 @@
 - 서킷 브레이커
 
 # MVP Test Strategy:
-1. [ ] 프로바이더 추상화 테스트
-   - [ ] DeepSeekProvider 동작 확인
-   - [ ] OpenAIProvider 동작 확인
-   - [ ] 환경 변수 기반 프로바이더 전환
-2. [ ] API 연결 테스트
-   - [ ] DeepSeek API 연결 확인
-   - [ ] 커스텀 엔드포인트 연결 테스트
-   - [ ] 기본 요청/응답 테스트
-   - [ ] API 키 유효성 확인
-3. [ ] 에러 처리 테스트
-   - [ ] 잘못된 API 키 처리
-   - [ ] 네트워크 에러 처리
-   - [ ] 재시도 로직 확인
-   - [ ] 프로바이더 전환 실패 처리
-4. [ ] 기본 기능 테스트
-   - [ ] 간단한 질문 처리
-   - [ ] 응답 수신 확인
-   - [ ] 토큰 사용량 확인
-   - [ ] 다양한 모델로 테스트
+1. [x] 프로바이더 추상화 테스트
+   - [x] DeepSeekProvider 동작 확인
+   - [x] OpenAIProvider 동작 확인
+   - [x] 환경 변수 기반 프로바이더 전환
+2. [x] API 연결 테스트
+   - [x] DeepSeek API 연결 확인
+   - [x] 커스텀 엔드포인트 연결 테스트
+   - [x] 기본 요청/응답 테스트
+   - [x] API 키 유효성 확인
+3. [x] 에러 처리 테스트
+   - [x] 잘못된 API 키 처리
+   - [x] 네트워크 에러 처리
+   - [x] 재시도 로직 확인
+   - [x] 프로바이더 전환 실패 처리
+4. [x] 기본 기능 테스트
+   - [x] 간단한 질문 처리
+   - [x] 응답 수신 확인
+   - [x] 토큰 사용량 확인
+   - [x] 다양한 모델로 테스트
