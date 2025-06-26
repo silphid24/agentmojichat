@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     )
     
     # LLM Configuration
-    llm_provider: str = Field(default="deepseek", env="LLM_PROVIDER")
-    llm_model: str = Field(default="deepseek-r1", env="LLM_MODEL")
+    llm_provider: str = Field(default="openai", env="LLM_PROVIDER")
+    llm_model: str = Field(default="gpt-3.5-turbo", env="LLM_MODEL")
     llm_api_base: Optional[str] = Field(default=None, env="LLM_API_BASE")
     llm_api_key: str = Field(default="", env="LLM_API_KEY")
     

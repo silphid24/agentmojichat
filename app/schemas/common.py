@@ -1,6 +1,6 @@
 """Common schemas"""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
 

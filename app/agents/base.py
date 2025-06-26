@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
-from langchain.schema import BaseMessage
+from langchain_core.messages import BaseMessage
 from langchain.memory import ConversationBufferWindowMemory
 
 from app.core.logging import logger

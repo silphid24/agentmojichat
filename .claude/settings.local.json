@@ -8,7 +8,10 @@
       "Bash(mkdir:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(chmod:*)",
+      "Bash(pip install:*)",
+      "Bash(python3 -m pip install:*)"
     ],
     "deny": []
   }

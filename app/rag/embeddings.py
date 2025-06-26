@@ -37,11 +37,11 @@ class LLMEmbeddings(BaseEmbeddings):
     def _get_embedding_model(self) -> str:
         """Get appropriate embedding model for provider"""
         embedding_models = {
-            "openai": "text-embedding-ada-002",
+            "openai": "text-embedding-3-small",  # OpenAI's small embedding model
             "deepseek": "deepseek-chat",  # DeepSeek uses same model for embeddings
             "custom": "all-MiniLM-L6-v2"  # Default for local models
         }
-        return embedding_models.get(self.provider, "text-embedding-ada-002")
+        return embedding_models.get(self.provider, "text-embedding-3-small")
     
     async def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Embed multiple documents"""

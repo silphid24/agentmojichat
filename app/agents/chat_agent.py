@@ -1,10 +1,10 @@
 """Chat agent implementation"""
 
 from typing import List, Optional, Dict, Any
-from langchain.schema import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.chains import LLMChain
-from langchain.callbacks import AsyncCallbackHandler
+from langchain_core.callbacks import AsyncCallbackHandler
 
 from app.agents.base import BaseAgent
 from app.core.logging import logger

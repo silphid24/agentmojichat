@@ -2,10 +2,8 @@
 
 from typing import List, Optional, Any, Dict, Iterator, AsyncIterator
 from langchain.chat_models.base import BaseChatModel
-from langchain.schema import (
-    BaseMessage, ChatResult, ChatGeneration, 
-    AIMessage, LLMResult, Generation
-)
+from langchain_core.messages import BaseMessage, AIMessage
+from langchain_core.outputs import ChatResult, ChatGeneration, ChatGenerationChunk, LLMResult, Generation
 from langchain.callbacks.manager import (
     CallbackManagerForLLMRun,
     AsyncCallbackManagerForLLMRun,
@@ -111,7 +109,7 @@ class LangChainLLMWrapper(BaseChatModel):
         """Stream chat response synchronously"""
         # This is a sync wrapper for async method
         import asyncio
-        from langchain.schema import ChatGenerationChunk
+        # ChatGenerationChunk는 이미 import됨
         
         async def _collect_stream():
             chunks = []
@@ -142,7 +140,7 @@ class LangChainLLMWrapper(BaseChatModel):
         **kwargs: Any,
     ) -> AsyncIterator[ChatGenerationChunk]:
         """Stream chat response asynchronously"""
-        from langchain.schema import ChatGenerationChunk
+        # ChatGenerationChunk는 이미 import됨
         
         async for token in self.llm_router.stream(messages, **kwargs):
             if run_manager:

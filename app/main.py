@@ -3,6 +3,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
 from app.core.config import settings
@@ -83,3 +84,6 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 # Include routers
 app.include_router(api_router, prefix="/api/v1")
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="app/static"), name="static")

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Annotated, List
 import uuid
 from datetime import datetime
-from langchain.schema import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 from app.schemas.chat import (
     ChatRequest, ChatResponse, ChatMessage, ChatChoice, ChatUsage,
