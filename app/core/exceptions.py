@@ -60,3 +60,35 @@ class NotFoundError(MojiException):
     
     def __init__(self, resource: str):
         super().__init__(f"{resource} not found", error_code="NOT_FOUND")
+
+
+class RAGError(MojiException):
+    """RAG service error"""
+    
+    def __init__(self, message: str, operation: Optional[str] = None):
+        details = {"operation": operation} if operation else {}
+        super().__init__(message, error_code="RAG_ERROR", details=details)
+
+
+class VectorStoreError(MojiException):
+    """Vector store error"""
+    
+    def __init__(self, message: str, store_name: Optional[str] = None):
+        details = {"store_name": store_name} if store_name else {}
+        super().__init__(message, error_code="VECTOR_STORE_ERROR", details=details)
+
+
+class AdapterError(MojiException):
+    """Platform adapter error"""
+    
+    def __init__(self, message: str, platform: Optional[str] = None):
+        details = {"platform": platform} if platform else {}
+        super().__init__(message, error_code="ADAPTER_ERROR", details=details)
+
+
+class ConfigurationError(MojiException):
+    """Configuration error"""
+    
+    def __init__(self, message: str, config_key: Optional[str] = None):
+        details = {"config_key": config_key} if config_key else {}
+        super().__init__(message, error_code="CONFIG_ERROR", details=details)

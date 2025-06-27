@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     llm_api_base: Optional[str] = Field(default=None, env="LLM_API_BASE")
     llm_api_key: str = Field(default="", env="LLM_API_KEY")
     
+    # Monday.com Integration (임시로 추가)
+    monday_api_key: Optional[str] = Field(default=None, env="MONDAY_API_KEY")
+    
     # Security
     secret_key: str = Field(
         default="your-secret-key-here-change-in-production",

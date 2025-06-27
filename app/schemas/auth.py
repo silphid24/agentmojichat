@@ -40,3 +40,9 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     """Token data schema"""
     username: Optional[str] = None
+
+
+class TokenRequest(BaseModel):
+    """Token request schema"""
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=6)

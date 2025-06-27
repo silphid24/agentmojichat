@@ -56,7 +56,10 @@ class LLMRouter:
     async def _initialize_provider(self, provider_name: str) -> None:
         """Initialize a specific provider"""
         if provider_name not in self.PROVIDERS:
-            raise ValueError(f"Unknown provider: {provider_name}")
+            raise LLMError(
+                f"Unknown provider: {provider_name}",
+                provider=provider_name
+            )
         
         # Create provider instance if not exists
         if provider_name not in self.providers:
@@ -80,7 +83,10 @@ class LLMRouter:
             await self._switch_provider(provider, model)
         
         if not self.current_provider:
-            raise LLMError("No LLM provider initialized")
+            raise LLMError(
+                "No LLM provider initialized",
+                provider=self.config.provider if self.config else None
+            )
         
         # Override model if specified
         if model and model != self.config.model:
@@ -107,7 +113,10 @@ class LLMRouter:
             await self._switch_provider(provider, model)
         
         if not self.current_provider:
-            raise LLMError("No LLM provider initialized")
+            raise LLMError(
+                "No LLM provider initialized",
+                provider=self.config.provider if self.config else None
+            )
         
         # Override model if specified
         if model and model != self.config.model:
@@ -129,7 +138,10 @@ class LLMRouter:
     ) -> None:
         """Switch to a different provider"""
         if provider_name not in self.PROVIDERS:
-            raise ValueError(f"Unknown provider: {provider_name}")
+            raise LLMError(
+                f"Unknown provider: {provider_name}",
+                provider=provider_name
+            )
         
         # Update config
         self.config.provider = provider_name

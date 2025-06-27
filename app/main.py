@@ -5,11 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+from pydantic import ValidationError as PydanticValidationError
 
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.middleware import RequestIDMiddleware, LoggingMiddleware
 from app.core.exceptions import MojiException
+from app.core.error_handlers import (
+    moji_exception_handler,
+    validation_exception_handler,
+    general_exception_handler
+)
 from app.api.v1.router import api_router
 
 
@@ -52,34 +58,9 @@ app.add_middleware(
 
 
 # Exception handlers
-@app.exception_handler(MojiException)
-async def moji_exception_handler(request: Request, exc: MojiException):
-    """Handle custom exceptions"""
-    return JSONResponse(
-        status_code=400,
-        content={
-            "error": {
-                "message": exc.message,
-                "type": exc.error_code,
-                "details": exc.details
-            }
-        }
-    )
-
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception):
-    """Handle unexpected exceptions"""
-    logger.error(f"Unexpected error: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "error": {
-                "message": "Internal server error",
-                "type": "internal_error"
-            }
-        }
-    )
+app.exception_handler(MojiException)(moji_exception_handler)
+app.exception_handler(PydanticValidationError)(validation_exception_handler)
+app.exception_handler(Exception)(general_exception_handler)
 
 
 # Include routers

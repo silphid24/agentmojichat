@@ -9,13 +9,16 @@ from pathlib import Path
 
 from app.schemas.auth import UserInDB
 from app.api.v1.endpoints.auth import get_current_user
-from app.rag.pipeline import RAGPipeline, RAGQuery, RAGResponse
+from app.rag.pipeline import RAGQuery, RAGResponse
+from app.rag.adapter import RAGPipelineAdapter
 from app.core.logging import logger
+from app.core.exceptions import RAGError, ValidationError
+from app.core.error_handlers import handle_errors
 
 router = APIRouter()
 
-# Global RAG pipeline instance
-rag_pipeline = RAGPipeline()
+# Global RAG pipeline instance using adapter for enhanced_rag
+rag_pipeline = RAGPipelineAdapter()
 
 
 class AddTextRequest(BaseModel):
@@ -31,6 +34,7 @@ class RAGStatsResponse(BaseModel):
 
 
 @router.post("/query", response_model=RAGResponse)
+@handle_errors()
 async def query_rag(
     query: RAGQuery,
     current_user: Annotated[UserInDB, Depends(get_current_user)]
@@ -38,18 +42,15 @@ async def query_rag(
     """Query the RAG system"""
     logger.info(f"RAG query from user {current_user.username}: {query.query}")
     
-    try:
-        response = await rag_pipeline.query(query)
-        return response
-    except Exception as e:
-        logger.error(f"RAG query error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error processing query: {str(e)}"
-        )
+    response = await rag_pipeline.query(query)
+    if not response:
+        raise RAGError("Failed to generate response", operation="query")
+    
+    return response
 
 
 @router.post("/add/text")
+@handle_errors()
 async def add_text(
     request: AddTextRequest,
     current_user: Annotated[UserInDB, Depends(get_current_user)]
@@ -57,28 +58,22 @@ async def add_text(
     """Add text to the RAG system"""
     logger.info(f"Adding text to RAG (length: {len(request.text)})")
     
-    try:
-        result = await rag_pipeline.add_text(
-            text=request.text,
-            metadata=request.metadata
+    result = await rag_pipeline.add_text(
+        text=request.text,
+        metadata=request.metadata
+    )
+    
+    if not result["success"]:
+        raise RAGError(
+            result.get("error", "Failed to add text"),
+            operation="add_text"
         )
-        
-        if not result["success"]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get("error", "Failed to add text")
-            )
-        
-        return result
-    except Exception as e:
-        logger.error(f"Error adding text: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error adding text: {str(e)}"
-        )
+    
+    return result
 
 
 @router.post("/add/file")
+@handle_errors()
 async def add_file(
     file: UploadFile = File(...),
     current_user: Annotated[UserInDB, Depends(get_current_user)] = None
@@ -89,9 +84,9 @@ async def add_file(
     file_ext = Path(file.filename).suffix.lower()
     
     if file_ext not in allowed_extensions:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported file type. Allowed: {allowed_extensions}"
+        raise ValidationError(
+            f"Unsupported file type. Allowed: {allowed_extensions}",
+            field="file"
         )
     
     # Save uploaded file temporarily

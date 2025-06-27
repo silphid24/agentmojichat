@@ -1,4 +1,20 @@
-"""RAG pipeline implementation"""
+"""RAG pipeline implementation
+
+DEPRECATED: This module is deprecated in favor of enhanced_rag.py
+
+Please use:
+- app.rag.enhanced_rag.EnhancedRAGPipeline for direct usage
+- app.rag.adapter.RAGPipelineAdapter for API compatibility
+
+See app/rag/MIGRATION_GUIDE.md for migration instructions.
+"""
+
+import warnings
+warnings.warn(
+    "app.rag.pipeline is deprecated. Use app.rag.enhanced_rag instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 from typing import List, Dict, Any, Optional, Tuple
 from langchain.schema import Document, BaseMessage, HumanMessage, SystemMessage

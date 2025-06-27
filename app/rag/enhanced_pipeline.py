@@ -1,4 +1,22 @@
-"""Enhanced RAG pipeline with multi-store support"""
+"""Enhanced RAG pipeline with multi-store support
+
+DEPRECATED: This module is deprecated in favor of enhanced_rag.py
+
+Multi-store functionality will be migrated to enhanced_rag.py in a future update.
+
+Please use:
+- app.rag.enhanced_rag.EnhancedRAGPipeline for direct usage
+- app.rag.adapter.RAGPipelineAdapter for API compatibility
+
+See app/rag/MIGRATION_GUIDE.md for migration instructions.
+"""
+
+import warnings
+warnings.warn(
+    "app.rag.enhanced_pipeline is deprecated. Use app.rag.enhanced_rag instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 from typing import List, Dict, Any, Optional, Union
 from langchain.schema import Document, BaseMessage, HumanMessage, SystemMessage
