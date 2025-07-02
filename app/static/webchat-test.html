@@ -247,6 +247,58 @@
             font-weight: 500;
         }
         
+        /* Temperature slider styles */
+        .temperature-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 15px;
+        }
+        
+        .temp-label {
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+            min-width: 80px;
+        }
+        
+        #temp-value {
+            font-weight: 600;
+            color: #fbbf24;
+        }
+        
+        #temperature-slider {
+            width: 80px;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+        
+        #temperature-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #fbbf24;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        #temperature-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #fbbf24;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
         .model-selector-container select {
             background: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -285,6 +337,10 @@
                         <input type="checkbox" id="rag-toggle" checked title="RAG 사용 여부">
                         <span class="rag-slider"></span>
                     </label>
+                </div>
+                <div class="temperature-slider-container">
+                    <span class="temp-label">창의성: <span id="temp-value">0.7</span></span>
+                    <input type="range" id="temperature-slider" min="0" max="2" step="0.1" value="0.7" title="창의성 조절 (0=정확, 2=창의적)">
                 </div>
                 <select id="provider-selector" title="AI 프로바이더 선택">
                     <option value="custom" selected>🖥️ Workstation LLM</option>

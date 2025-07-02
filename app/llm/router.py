@@ -62,7 +62,7 @@ class LLMRouter:
                 api_base=api_base,
                 temperature=0.7,
                 max_tokens=1024,
-                timeout=30,
+                timeout=15,
                 retry_count=3
             )
         
@@ -93,7 +93,7 @@ class LLMRouter:
                 api_base=settings.deepseek_local_url or "http://localhost:11434/v1",
                 temperature=self.config.temperature,
                 max_tokens=self.config.max_tokens,
-                timeout=self.config.timeout,
+                timeout=15,
                 retry_count=self.config.retry_count
             )
             provider = provider_class(config)
@@ -105,7 +105,7 @@ class LLMRouter:
                 api_base=settings.exaone_local_url or "http://localhost:11435/v1",
                 temperature=self.config.temperature,
                 max_tokens=self.config.max_tokens,
-                timeout=self.config.timeout,
+                timeout=15,
                 retry_count=self.config.retry_count
             )
             provider = provider_class(config)
@@ -118,7 +118,7 @@ class LLMRouter:
                 api_base=self.config.api_base,
                 temperature=self.config.temperature,
                 max_tokens=self.config.max_tokens,
-                timeout=self.config.timeout,
+                timeout=15,
                 retry_count=self.config.retry_count
             )
             provider = provider_class(config)

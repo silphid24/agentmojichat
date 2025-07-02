@@ -28,12 +28,15 @@ class MojiWebChat {
             typingIndicator: document.getElementById('typing-indicator'),
             modelSelector: document.getElementById('model-selector'),
             providerSelector: document.getElementById('provider-selector'),
-            ragToggle: document.getElementById('rag-toggle')
+            ragToggle: document.getElementById('rag-toggle'),
+            temperatureSlider: document.getElementById('temperature-slider'),
+            tempValue: document.getElementById('temp-value')
         };
         
         // Model configuration
         this.currentProvider = 'custom';  // Default to workstation LLM
         this.currentModel = 'your-model-name';
+        this.temperature = 0.7;  // Default temperature
         this.providers = {
             'openai': { name: 'OpenAI', icon: '🤖', models: [] },
             'anthropic': { name: 'Anthropic', icon: '🧠', models: [] },
@@ -151,14 +154,15 @@ class MojiWebChat {
         // Add user message to chat
         this.addMessage(text, 'user');
         
-        // Send to server with model info and RAG setting
+        // Send to server with model info, RAG setting, and temperature
         const message = {
             type: 'text',
             text: text,
             timestamp: new Date().toISOString(),
             provider: this.currentProvider,
             model: this.currentModel,
-            useRag: this.elements.ragToggle ? this.elements.ragToggle.checked : true
+            useRag: this.elements.ragToggle ? this.elements.ragToggle.checked : true,
+            temperature: this.temperature
         };
         
         this.ws.send(JSON.stringify(message));
@@ -375,6 +379,27 @@ class MojiWebChat {
             this.elements.ragToggle.addEventListener('change', (e) => {
                 const ragStatus = e.target.checked ? 'ON' : 'OFF';
                 this.addMessage(`RAG 모드: ${ragStatus}`, 'system');
+            });
+        }
+        
+        // Temperature slider
+        if (this.elements.temperatureSlider) {
+            this.elements.temperatureSlider.addEventListener('input', (e) => {
+                this.temperature = parseFloat(e.target.value);
+                if (this.elements.tempValue) {
+                    this.elements.tempValue.textContent = this.temperature.toFixed(1);
+                }
+            });
+            
+            this.elements.temperatureSlider.addEventListener('change', (e) => {
+                const tempValue = parseFloat(e.target.value);
+                let tempDescription = '';
+                if (tempValue <= 0.3) tempDescription = '매우 정확';
+                else if (tempValue <= 0.7) tempDescription = '균형적';
+                else if (tempValue <= 1.2) tempDescription = '창의적';
+                else tempDescription = '매우 창의적';
+                
+                this.addMessage(`창의성 설정: ${tempValue} (${tempDescription})`, 'system');
             });
         }
     }
