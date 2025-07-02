@@ -1,9 +1,9 @@
-# Task ID: 15
+# Task ID: 12
 # Title: 모니터링 및 관찰성(Observability) 시스템 구축
 # Status: pending
 # Dependencies: 11
 # Priority: medium
-# Description: OpenTelemetry, Prometheus, Grafana를 활용하여 MOJI AI Agent와 SMHACCP 플랫폼의 종합적인 모니터링 및 관찰성 시스템을 구축합니다.
+# Description: OpenTelemetry, Prometheus, Grafana를 활용하여 MOJI AI Agent의 종합적인 모니터링 및 관찰성 시스템을 구축합니다.
 # Details:
 1. [ ] OpenTelemetry 통합
    - [ ] Tracing 설정 (분산 추적)

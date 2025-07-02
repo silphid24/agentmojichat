@@ -1,8 +1,8 @@
-# MOJI AI Agent & SMHACCP 프로젝트 관리 플랫폼
+# MOJI AI Agent
 
 ## 🚀 프로젝트 개요
 
-MOJI는 다양한 플랫폼에서 활용 가능한 지능형 AI 어시스턴트이며, SMHACCP는 MOJI를 통합한 프로젝트 관리 시스템입니다.
+MOJI는 다양한 플랫폼에서 활용 가능한 지능형 AI 어시스턴트입니다. 
 
 ### 주요 특징
 
@@ -16,87 +16,184 @@ MOJI는 다양한 플랫폼에서 활용 가능한 지능형 AI 어시스턴트�
 
 ```
 agentmoji/
-├── script/          # 개발 작업 설명서 (task_01-15.txt)
-├── cursor/          # 개발 가이드라인
-│   └── rules/
-│       └── global.mdc
-├── moji-prd-v3.md  # 제품 요구사항 문서
-├── CLAUDE.md       # Claude AI 개발 가이드
-└── README.md       # 프로젝트 설명서
+├── app/                # 애플리케이션 코드
+│   ├── adapters/      # 플랫폼 어댑터
+│   ├── agents/        # AI 에이전트
+│   ├── api/           # REST API
+│   ├── core/          # 핵심 모듈
+│   ├── llm/           # LLM 프로바이더
+│   ├── rag/           # RAG 시스템
+│   └── vectorstore/   # 벡터 스토어
+├── data/              # 데이터 디렉토리
+├── tests/             # 테스트 코드
+├── script/            # 개발 작업 설명서
+└── docs/              # 문서
 ```
 
 ## 🛠 기술 스택
 
-### Backend (Phase 1)
+### Backend
 - **Language**: Python 3.11+
 - **Framework**: FastAPI 0.111
 - **AI/ML**: LangChain 0.2.x, LangGraph 0.1.x
 - **Database**: PostgreSQL 15, Redis 7, Chroma DB
-- **LLM**: DeepSeek R1 (기본), 환경 변수로 변경 가능
+- **LLM**: DeepSeek R1 (기본), OpenAI, Anthropic, 커스텀 LLM 서버 지원
 
-### Frontend (Phase 2)
-- **Framework**: Next.js 14
-- **Language**: TypeScript 5
-- **UI**: Tailwind CSS 3, Shadcn/ui
-- **State**: Zustand, React Query v5
+## 🚀 시작하기
 
-## 🚦 개발 로드맵
+### 1. 환경 설정
 
-### Phase 1: MOJI AI Agent (8주)
-1. 아키텍처 설계 및 API 스펙 정의
-2. Docker 환경 구성
-3. FastAPI 서버 구축
-4. Multi-Agent 시스템 구현
-5. LLM Router 개발
-6. RAG 파이프라인 구축
-7. Vector Store 설정
-8. 플랫폼 어댑터 개발
-
-### Phase 2: SMHACCP Platform (6주)
-1. Frontend 개발
-2. MOJI 통합
-3. 외부 서비스 연동
-4. 모니터링 시스템 구축
-
-## 🏃‍♂️ 시작하기
-
-현재 프로젝트는 계획 단계입니다. 개발을 시작하려면:
-
-1. `/script/task_01_architecture_design.txt`부터 순차적으로 진행
-2. 각 task 파일의 MVP Details 섹션을 우선 구현
-3. `/cursor/rules/global.mdc`의 개발 지침 준수
-
-## 🔧 환경 설정
-
-### LLM 설정 (환경 변수)
 ```bash
-export LLM_PROVIDER=deepseek      # deepseek, openai, anthropic, custom
-export LLM_MODEL=deepseek-r1      # 모델명
-export LLM_API_BASE=https://...   # API 엔드포인트
-export LLM_API_KEY=your-api-key   # API 키
+# 가상환경 생성 및 활성화
+python3 -m venv venv
+source venv/bin/activate
+
+# 의존성 설치
+pip install -r requirements.txt
 ```
 
-## 📝 개발 원칙
+### 2. 환경 변수 설정
 
-- **테스트 우선**: 코어 로직은 TDD로 구현
-- **SOLID 원칙**: 5대 원칙 준수
-- **클린 아키텍처**: 계층 분리 유지
-- **MVP 우선**: 최소 기능부터 구현
+`.env` 파일 생성:
 
-자세한 개발 가이드라인은 [`CLAUDE.md`](./CLAUDE.md)와 [`/cursor/rules/global.mdc`](./cursor/rules/global.mdc)를 참조하세요.
+```env
+# Application
+DEBUG=true
+PORT=8100
 
-## 📊 성공 지표
+# LLM Configuration
+LLM_PROVIDER=deepseek
+LLM_MODEL=deepseek-r1
+LLM_API_KEY=your-api-key
 
-### MOJI AI Agent
-- 응답 정확도: 90% 이상
-- 응답 시간: 2초 이내
-- 동시 사용자: 1,000명 이상
-- 가용성: 99.9% SLA
+# 워크스테이션 LLM 서버 사용 예시
+# LLM_PROVIDER=custom
+# LLM_MODEL=your-model-name
+# LLM_API_BASE=http://192.168.0.7:5000/v1
+# LLM_API_KEY=your-api-key-if-needed
 
-### SMHACCP Platform
-- 사용자 채택률: 80% 이상
-- 업무 효율성: 50% 향상
-- 일일 MOJI 활용: 200건 이상
+# Database
+DATABASE_URL=postgresql://user:pass@localhost/moji
+REDIS_URL=redis://localhost:6379
+```
+
+### 3. 서버 실행
+
+```bash
+./run_server.sh
+```
+
+서버가 실행되면:
+- API: http://localhost:8100
+- 문서: http://localhost:8100/docs
+- WebChat: http://localhost:8100/static/webchat-test.html
+
+## 📡 API 사용법
+
+### 채팅 엔드포인트
+
+```bash
+curl -X POST http://localhost:8100/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-token" \
+  -d '{
+    "message": "안녕하세요!",
+    "session_id": "test-session"
+  }'
+```
+
+### RAG 문서 추가
+
+```bash
+curl -X POST http://localhost:8100/api/v1/rag/add/text \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-token" \
+  -d '{
+    "text": "문서 내용...",
+    "metadata": {"source": "manual"}
+  }'
+```
+
+## 🔌 플랫폼 통합
+
+### Slack 연동
+
+1. Slack App 생성
+2. 환경 변수 설정:
+   ```env
+   SLACK_BOT_TOKEN=xoxb-...
+   SLACK_APP_TOKEN=xapp-...
+   ```
+3. 어댑터 활성화
+
+### Web Chat 위젯
+
+```html
+<script src="http://localhost:8100/static/moji-widget.js"></script>
+<script>
+  MojiChat.init({
+    apiUrl: 'http://localhost:8100',
+    position: 'bottom-right'
+  });
+</script>
+```
+
+## 🤖 LLM 프로바이더 설정
+
+MOJI는 다양한 LLM 프로바이더를 지원합니다:
+
+### DeepSeek (기본)
+```env
+LLM_PROVIDER=deepseek
+LLM_MODEL=deepseek-r1
+LLM_API_KEY=your-deepseek-api-key
+```
+
+### OpenAI
+```env
+LLM_PROVIDER=openai
+LLM_MODEL=gpt-3.5-turbo
+LLM_API_KEY=your-openai-api-key
+```
+
+### 워크스테이션 LLM 서버
+로컬 워크스테이션에서 실행 중인 LLM 서버를 사용할 수 있습니다:
+
+```env
+LLM_PROVIDER=custom
+LLM_MODEL=your-model-name
+LLM_API_BASE=http://192.168.0.7:5000/v1
+LLM_API_KEY=your-api-key-if-needed  # 선택사항
+```
+
+### Ollama 등 로컬 모델
+```env
+LLM_PROVIDER=custom
+LLM_MODEL=llama3
+LLM_API_BASE=http://localhost:11434/v1
+```
+
+## 🧪 테스트
+
+```bash
+# 단위 테스트
+pytest tests/unit
+
+# 통합 테스트
+pytest tests/integration
+
+# 전체 테스트
+pytest
+```
+
+## 📚 문서
+
+- [API 문서](http://localhost:8100/docs)
+- [개발 가이드](./CLAUDE.md)
+- [로컬 환경 설정](./LOCAL_SETUP.md)
+- [WebChat 실행 가이드](./WEBCHAT_GUIDE.md)
+- [RAG 테스트 가이드](./RAG_GUIDE.md)
+
 
 ## 🤝 기여하기
 
@@ -108,8 +205,10 @@ export LLM_API_KEY=your-api-key   # API 키
 
 ## 📄 라이선스
 
-프로젝트 라이선스는 추후 결정 예정입니다.
+이 프로젝트는 MIT 라이선스 하에 있습니다.
 
-## 📞 문의
+## 🙏 감사의 말
 
-프로젝트 관련 문의사항은 이슈를 통해 남겨주세요.
+- LangChain 커뮤니티
+- FastAPI 개발팀
+- 모든 오픈소스 기여자들

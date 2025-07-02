@@ -192,7 +192,7 @@ class WebChatAdapter(BaseAdapter):
                             })
                         
                         else:
-                            # Try RAG first, fallback to regular LLM
+                            # Handle RAG selection logic
                             from app.rag.enhanced_rag import rag_pipeline
                             from app.llm.router import llm_router
                             from langchain_core.messages import HumanMessage
@@ -200,68 +200,76 @@ class WebChatAdapter(BaseAdapter):
                             # Log incoming message
                             print(f"[WebChat] Received message: {message.text}")
                             
+                            # Check RAG setting from client
+                            use_rag = data.get('useRag', True)  # Default to True for backward compatibility
+                            provider = data.get('provider')
+                            model = data.get('model')
+                            
+                            print(f"[WebChat] RAG setting: {use_rag}, Provider: {provider}, Model: {model}")
+                            
                             try:
-                                # First try RAG search
-                                print("[WebChat] Trying RAG search...")
-                                rag_result = await rag_pipeline.answer_with_confidence(
-                                    message.text, 
-                                    k=5, 
-                                    score_threshold=1.6
-                                )
-                                
-                                # Check if RAG found relevant documents
-                                if (rag_result.get('sources') and 
-                                    len(rag_result.get('sources', [])) > 0 and
-                                    rag_result.get('answer') and 
-                                    '관련된 정보를 찾을 수 없습니다' not in rag_result.get('answer', '')):
+                                if use_rag:
+                                    # Try Hybrid RAG first (improved search)
+                                    print("[WebChat] Trying Hybrid RAG search...")
+                                    from app.rag.enhanced_rag import get_hybrid_pipeline
+                                    hybrid_pipeline = get_hybrid_pipeline()
                                     
-                                    print("[WebChat] Using RAG response")
-                                    # Use RAG response
-                                    response_text = rag_result['answer']
+                                    rag_result = await hybrid_pipeline.answer_with_hybrid_search(
+                                        message.text, 
+                                        k=5, 
+                                        score_threshold=0.1  # Lower threshold for hybrid search
+                                    )
                                     
-                                    # Add confidence indicator if not HIGH
-                                    if rag_result.get('confidence') != 'HIGH':
-                                        response_text += f"\n\n*(신뢰도: {rag_result.get('confidence', 'MEDIUM')})*"
-                                    
-                                    await connection.send({
-                                        "id": str(uuid.uuid4()),
-                                        "type": "text",
-                                        "text": response_text,
-                                        "timestamp": datetime.utcnow().isoformat(),
-                                    })
+                                    # Check if RAG found relevant documents
+                                    if (rag_result.get('sources') and 
+                                        len(rag_result.get('sources', [])) > 0 and
+                                        rag_result.get('answer') and 
+                                        '관련된 정보를 찾을 수 없습니다' not in rag_result.get('answer', '')):
+                                        
+                                        print("[WebChat] Using Hybrid RAG response")
+                                        # Use Hybrid RAG response
+                                        response_text = rag_result['answer']
+                                        
+                                        # Enhanced metadata with hybrid search info
+                                        sources = rag_result.get('sources', [])
+                                        confidence = rag_result.get('confidence', 'MEDIUM')
+                                        search_metadata = rag_result.get('search_metadata', {})
+                                        
+                                        metadata = {
+                                            "mode": "Hybrid-RAG",
+                                            "confidence": confidence,
+                                            "sources": len(sources),
+                                            "search_type": search_metadata.get('search_type', 'hybrid'),
+                                            "total_results": search_metadata.get('total_results', 0)
+                                        }
+                                        
+                                        # Enhanced source info display
+                                        search_info = f"신뢰도: {confidence}, 출처: {len(sources)}개"
+                                        if search_metadata.get('total_results'):
+                                            search_info += f", 검색결과: {search_metadata['total_results']}개"
+                                        
+                                        response_text += f"\n\n🔍 **하이브리드 검색** ({search_info})"
+                                        
+                                        await connection.send({
+                                            "id": str(uuid.uuid4()),
+                                            "type": "text",
+                                            "text": response_text,
+                                            "timestamp": datetime.utcnow().isoformat(),
+                                            "metadata": metadata
+                                        })
+                                    else:
+                                        # No relevant documents found, fallback to LLM
+                                        print("[WebChat] No relevant documents found, using regular LLM")
+                                        await self._generate_llm_response(connection, message.text, provider, model, "Hybrid")
                                 else:
-                                    # Fallback to regular LLM
-                                    print("[WebChat] No relevant documents found, using regular LLM")
-                                    
-                                    # Create messages list for LLM
-                                    messages = [HumanMessage(content=message.text)]
-                                    
-                                    # Generate response
-                                    print("[WebChat] Generating LLM response...")
-                                    response = await llm_router.generate(messages=messages)
-                                    print(f"[WebChat] Generated response: {response.content}")
-                                    
-                                    # Send response back to client
-                                    await connection.send({
-                                        "id": str(uuid.uuid4()),
-                                        "type": "text",
-                                        "text": response.content,
-                                        "timestamp": datetime.utcnow().isoformat(),
-                                    })
+                                    # RAG disabled, use LLM directly
+                                    print("[WebChat] RAG disabled, using LLM directly")
+                                    await self._generate_llm_response(connection, message.text, provider, model, "LLM")
                                     
                             except Exception as rag_error:
                                 print(f"[WebChat] RAG error: {str(rag_error)}, falling back to LLM")
-                                
-                                # Fallback to regular LLM on RAG error
-                                messages = [HumanMessage(content=message.text)]
-                                response = await llm_router.generate(messages=messages)
-                                
-                                await connection.send({
-                                    "id": str(uuid.uuid4()),
-                                    "type": "text",
-                                    "text": response.content,
-                                    "timestamp": datetime.utcnow().isoformat(),
-                                })
+                                # Fallback to LLM on any error
+                                await self._generate_llm_response(connection, message.text, provider, model, "Error-Fallback")
                         
                     except Exception as e:
                         print(f"[WebChat] Error processing message: {str(e)}")
@@ -403,6 +411,62 @@ class WebChatAdapter(BaseAdapter):
             "sessions": results,
         }
     
+    async def _generate_llm_response(
+        self, 
+        connection: WebChatConnection, 
+        text: str, 
+        provider: str = None, 
+        model: str = None, 
+        mode: str = "LLM"
+    ) -> None:
+        """Generate LLM response and send to client"""
+        from app.llm.router import llm_router
+        from langchain_core.messages import HumanMessage
+        
+        try:
+            # Create messages list for LLM
+            messages = [HumanMessage(content=text)]
+            
+            # Generate response with optional provider/model
+            print(f"[WebChat] Generating LLM response with provider={provider}, model={model}...")
+            response = await llm_router.generate(
+                messages=messages,
+                provider=provider,
+                model=model
+            )
+            print(f"[WebChat] Generated response: {response.content}")
+            
+            # Add mode indicator to response
+            response_text = response.content
+            if mode == "LLM":
+                response_text += f"\n\n🤖 **LLM 응답** ({provider or 'default'})"
+            elif mode == "Hybrid":
+                response_text += f"\n\n🔄 **하이브리드 응답** (RAG → LLM 폴백)"
+            elif mode == "Error-Fallback":
+                response_text += f"\n\n⚠️ **오류 복구** (LLM 폴백)"
+            
+            # Send response back to client
+            await connection.send({
+                "id": str(uuid.uuid4()),
+                "type": "text",
+                "text": response_text,
+                "timestamp": datetime.utcnow().isoformat(),
+                "metadata": {
+                    "mode": mode,
+                    "provider": provider,
+                    "model": model
+                }
+            })
+            
+        except Exception as e:
+            print(f"[WebChat] LLM generation error: {str(e)}")
+            await connection.send({
+                "id": str(uuid.uuid4()),
+                "type": "text",
+                "text": f"죄송합니다. 응답 생성 중 오류가 발생했습니다: {str(e)}",
+                "timestamp": datetime.utcnow().isoformat(),
+            })
+
     async def _process_incoming_message(
         self, data: Dict[str, Any], connection: WebChatConnection
     ) -> PlatformMessage:

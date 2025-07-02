@@ -16,6 +16,7 @@ class ChatRequest(BaseModel):
     """Chat request schema"""
     messages: List[ChatMessage]
     model: Optional[str] = Field(None, description="Override default model")
+    provider: Optional[str] = Field(None, description="LLM provider (openai, custom, deepseek, anthropic)")
     temperature: float = Field(0.7, ge=0, le=2)
     max_tokens: int = Field(1024, ge=1, le=4096)
     stream: bool = False

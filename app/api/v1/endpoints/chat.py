@@ -53,7 +53,11 @@ async def create_chat_completion(
     
     # Process with agent
     try:
-        ai_message = await agent_manager.process_with_agent(lc_messages)
+        ai_message = await agent_manager.process_with_agent(
+            lc_messages,
+            provider=request.provider,
+            model=request.model
+        )
         response_content = ai_message.content
     except Exception as e:
         logger.error(f"Agent processing error: {e}")

@@ -76,7 +76,10 @@ class AgentManager:
     async def process_with_agent(
         self,
         messages: List[BaseMessage],
-        agent_id: Optional[str] = None
+        agent_id: Optional[str] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        **kwargs
     ) -> BaseMessage:
         """Process messages with specified or default agent"""
         if agent_id:
@@ -85,7 +88,16 @@ class AgentManager:
             agent = self.get_default_agent()
         
         logger.info(f"Processing with agent: {agent.name}")
-        return await agent.process(messages)
+        
+        # Pass provider and model info to agent if supported
+        process_kwargs = {}
+        if provider:
+            process_kwargs['provider'] = provider
+        if model:
+            process_kwargs['model'] = model
+        process_kwargs.update(kwargs)
+        
+        return await agent.process(messages, **process_kwargs)
     
     async def reset_agent(self, agent_id: str) -> None:
         """Reset specific agent"""

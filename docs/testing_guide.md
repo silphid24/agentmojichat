@@ -15,10 +15,10 @@ cp .env.example .env
 docker-compose up -d
 
 # 3. API 테스트 스크립트 실행
-./test_api.sh
+./tools/test_api.sh
 
 # 4. 대화형 테스트
-python test_chat.py
+python tools/interactive_chat.py
 ```
 
 ### 2. 로컬 개발 환경에서 실행
@@ -45,12 +45,12 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## 테스트 도구
 
-### 1. test_chat.py - 대화형 챗봇 테스터
+### 1. interactive_chat.py - 대화형 챗봇 테스터
 
 인터랙티브한 채팅 환경을 제공합니다:
 
 ```bash
-python test_chat.py
+python tools/interactive_chat.py
 ```
 
 기능:
@@ -64,12 +64,12 @@ python test_chat.py
 - `clear` - 새 세션 시작
 - `test` - 자동 테스트 시나리오 실행
 
-### 2. test_api.sh - API 엔드포인트 테스터
+### 2. tools/test_api.sh - API 엔드포인트 테스터
 
 모든 주요 API 엔드포인트를 자동으로 테스트합니다:
 
 ```bash
-./test_api.sh
+./tools/test_api.sh
 ```
 
 테스트 항목:

@@ -2,7 +2,7 @@
 
 from typing import Dict, Any, List, Optional
 from app.rag.enhanced_rag import EnhancedRAGPipeline
-from app.rag.pipeline import RAGQuery, RAGResponse, RAGContext
+from app.rag.pipeline import RAGQuery, RAGResponse
 from app.core.logging import logger
 
 
@@ -29,32 +29,31 @@ class RAGPipelineAdapter:
             # Parse sources from search metadata
             if "search_metadata" in result and "result_details" in result["search_metadata"]:
                 for detail in result["search_metadata"]["result_details"]:
-                    sources.append(RAGContext(
-                        text=f"Source: {detail.get('source', 'Unknown')}",
-                        metadata={
+                    sources.append({
+                        "content": f"Source: {detail.get('source', 'Unknown')}",
+                        "metadata": {
                             "source": detail.get("source"),
                             "score": detail.get("score"),
                             "chunk_id": detail.get("chunk_id")
-                        }
-                    ))
+                        },
+                        "score": detail.get("score", 0.0)
+                    })
             
             # Return compatible response
             return RAGResponse(
                 answer=result.get("answer", "No answer available"),
-                contexts=sources[:query.top_k] if sources else [],
-                metadata={
-                    "confidence": confidence,
-                    "reasoning": result.get("reasoning", ""),
-                    "search_metadata": result.get("search_metadata", {})
-                }
+                sources=sources[:query.top_k] if sources else [],
+                query=query.query,
+                total_sources=len(sources)
             )
             
         except Exception as e:
             logger.error(f"Error in RAG query adapter: {e}")
             return RAGResponse(
                 answer=f"Error processing query: {str(e)}",
-                contexts=[],
-                metadata={"error": str(e)}
+                sources=[],
+                query=query.query,
+                total_sources=0
             )
     
     async def add_text(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

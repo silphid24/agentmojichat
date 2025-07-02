@@ -38,6 +38,7 @@
             color: white;
             padding: 20px;
             text-align: center;
+            position: relative;
         }
         
         .chat-header h1 {
@@ -177,6 +178,99 @@
             text-align: center;
             font-size: 14px;
         }
+        
+        /* Model selector styles */
+        .model-selector-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        /* RAG toggle styles */
+        .rag-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .rag-toggle {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .rag-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .rag-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
+            transition: .4s;
+        }
+        
+        .rag-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: .4s;
+        }
+        
+        .rag-toggle input:checked + .rag-slider {
+            background-color: #4ade80;
+        }
+        
+        .rag-toggle input:checked + .rag-slider:before {
+            transform: translateX(26px);
+        }
+        
+        .rag-label {
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .model-selector-container select {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .model-selector-container select:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .model-selector-container select option {
+            background: #2563eb;
+            color: white;
+        }
+        
+        .model-info {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -184,6 +278,26 @@
         <div class="chat-header">
             <h1>MOJI WebChat</h1>
             <div class="status" id="connection-status">연결 대기중...</div>
+            <div class="model-selector-container">
+                <div class="rag-toggle-container">
+                    <span class="rag-label">RAG</span>
+                    <label class="rag-toggle">
+                        <input type="checkbox" id="rag-toggle" checked title="RAG 사용 여부">
+                        <span class="rag-slider"></span>
+                    </label>
+                </div>
+                <select id="provider-selector" title="AI 프로바이더 선택">
+                    <option value="custom" selected>🖥️ Workstation LLM</option>
+                    <option value="openai">🤖 OpenAI</option>
+                    <option value="anthropic">🧠 Anthropic</option>
+                    <option value="deepseek">🚀 DeepSeek</option>
+                    <option value="deepseek-local">💻 DeepSeek (Local)</option>
+                    <option value="exaone-local">🔮 EXAONE (Local)</option>
+                </select>
+                <select id="model-selector" title="모델 선택">
+                    <!-- Models will be loaded dynamically -->
+                </select>
+            </div>
         </div>
         
         <div class="chat-messages" id="chat-messages">

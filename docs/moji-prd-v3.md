@@ -324,8 +324,7 @@ Charts:
 ### 6.2 추가 통합 대상
 - SAP ERP
 - Jira/Confluence
-- Salesforce CRM
-- 국내 그룹웨어 (더존, 영림원 등)
+
 
 ---
 

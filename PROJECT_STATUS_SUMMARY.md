@@ -1,170 +1,169 @@
-# MOJI Project Status Summary
+# MOJI 프로젝트 현황 요약
 
-## Overview
-This document provides a comprehensive overview of the implemented features and remaining work for the MOJI AI Agent & SMHACCP Project Management Platform.
+## 개요
+이 문서는 MOJI AI 에이전트의 구현된 기능과 남은 작업에 대한 종합적인 개요를 제공합니다.
 
-## Completed Tasks (8/15)
+## 완료된 작업 (8/12)
 
-### Task 1: Architecture Design ✅
-- **Status**: Completed
-- **Key Achievements**:
-  - Designed monolithic FastAPI server architecture
-  - Defined core module structure (Agent, RAG, LLM Router)
-  - Created RESTful API specifications
-  - Established basic data models and JWT structure
+### Task 1: 아키텍처 설계 ✅
+- **상태**: 완료
+- **주요 성과**:
+  - 모놀리식 FastAPI 서버 아키텍처 설계
+  - 핵심 모듈 구조 정의 (Agent, RAG, LLM Router)
+  - RESTful API 사양 작성
+  - 기본 데이터 모델 및 JWT 구조 수립
 
-### Task 2: Docker Setup ✅
-- **Status**: Completed
-- **Key Achievements**:
-  - Basic project structure created
-  - Docker development environment configured
-  - PostgreSQL and Redis integration
-  - Hot reload enabled for development
-  - Note: Docker files moved to `docker-future/` directory for future use
+### Task 2: Docker 설정 ✅
+- **상태**: 완료
+- **주요 성과**:
+  - 기본 프로젝트 구조 생성
+  - Docker 개발 환경 구성
+  - PostgreSQL 및 Redis 통합
+  - 개발용 핫 리로드 활성화
+  - 참고: Docker 파일은 향후 사용을 위해 `docker-future/` 디렉토리로 이동
 
-### Task 3: FastAPI Server ✅
-- **Status**: Completed
-- **Key Achievements**:
-  - FastAPI server structure established
-  - Core endpoints implemented (/health, /chat, /auth)
-  - CORS middleware configured
-  - Global exception handling
-  - Environment-based configuration
+### Task 3: FastAPI 서버 ✅
+- **상태**: 완료
+- **주요 성과**:
+  - FastAPI 서버 구조 수립
+  - 핵심 엔드포인트 구현 (/health, /chat, /auth)
+  - CORS 미들웨어 구성
+  - 전역 예외 처리
+  - 환경 기반 설정
 
-### Task 4: Multi-Agent System ✅
-- **Status**: Completed
-- **Key Achievements**:
-  - LangChain integration complete
-  - Agent manager and base agent classes implemented
-  - Chat agent with conversation history
-  - RAG agent for document retrieval
-  - Tool integration framework
+### Task 4: 다중 에이전트 시스템 ✅
+- **상태**: 완료
+- **주요 성과**:
+  - LangChain 통합 완료
+  - 에이전트 매니저 및 기본 에이전트 클래스 구현
+  - 대화 기록이 있는 채팅 에이전트
+  - 문서 검색을 위한 RAG 에이전트
+  - 도구 통합 프레임워크
 
-### Task 5: LLM Router ✅
-- **Status**: Completed
-- **Key Achievements**:
-  - Dynamic LLM provider selection via environment variables
-  - DeepSeek API integration (default)
-  - OpenAI provider support
-  - Custom endpoint support
-  - Retry logic and error handling
+### Task 5: LLM 라우터 ✅
+- **상태**: 완료
+- **주요 성과**:
+  - 환경 변수를 통한 동적 LLM 프로바이더 선택
+  - DeepSeek API 통합 (기본값)
+  - OpenAI 프로바이더 지원
+  - 커스텀 엔드포인트 지원
+  - 재시도 로직 및 오류 처리
 
-### Task 6: RAG Pipeline ✅
-- **Status**: Completed
-- **Key Achievements**:
-  - Document processing for TXT and Markdown files
-  - Text splitting and chunking
-  - Embedding generation with OpenAI
-  - FAISS vector storage integration
-  - Basic RAG chain implementation
+### Task 6: RAG 파이프라인 ✅
+- **상태**: 완료
+- **주요 성과**:
+  - TXT 및 마크다운 파일 문서 처리
+  - 텍스트 분할 및 청킹
+  - OpenAI를 통한 임베딩 생성
+  - FAISS 벡터 스토리지 통합
+  - 기본 RAG 체인 구현
+  - 향상된 RAG 파이프라인 (신뢰도 점수, 쿼리 재작성)
 
-### Task 7: Vector Store ✅
-- **Status**: Completed
-- **Key Achievements**:
-  - Chroma DB integration complete
-  - Vector store abstraction layer
-  - Collection management
-  - Hybrid search capabilities
-  - Metadata filtering
-  - Persistence configuration
+### Task 7: 벡터 스토어 ✅
+- **상태**: 완료
+- **주요 성과**:
+  - Chroma DB 통합 완료
+  - 벡터 스토어 추상화 레이어
+  - 컬렉션 관리
+  - 하이브리드 검색 기능
+  - 메타데이터 필터링
+  - 지속성 구성
 
-### Task 8: Platform Adapters ✅
-- **Status**: Completed
-- **Key Achievements**:
-  - Base adapter interface designed
-  - Web Chat adapter with WebSocket support
-  - Teams adapter implementation
-  - KakaoTalk adapter implementation
-  - Common message format (PlatformMessage)
-  - Session management
+### Task 8: 플랫폼 어댑터 ✅
+- **상태**: 완료
+- **주요 성과**:
+  - 기본 어댑터 인터페이스 설계
+  - WebSocket 지원이 있는 웹 챗 어댑터
+  - Teams 어댑터 구현
+  - KakaoTalk 어댑터 구현
+  - 공통 메시지 포맷 (PlatformMessage)
+  - 세션 관리
 
-## Pending Tasks (7/15)
+## 진행 중인 작업 (4/12)
 
-### Task 9: Plugin System
-- **Status**: Pending
-- **Description**: Build plugin system for extending MOJI's capabilities
+### Task 9: 플러그인 시스템
+- **상태**: 대기 중
+- **설명**: MOJI의 기능을 확장하기 위한 플러그인 시스템 구축
 
-### Task 10: Security & Authentication
-- **Status**: Pending
-- **Description**: Implement comprehensive security measures and authentication
+### Task 10: 보안 및 인증
+- **상태**: 대기 중
+- **설명**: 포괄적인 보안 조치 및 인증 구현
 
-### Task 11: Testing & Deployment
-- **Status**: Pending
-- **Description**: Complete test coverage and deployment pipeline
+### Task 11: 테스트 및 배포
+- **상태**: 대기 중
+- **설명**: 완전한 테스트 커버리지 및 배포 파이프라인
 
-### Task 12: SMHACCP Frontend
-- **Status**: Pending
-- **Description**: Build Next.js frontend for SMHACCP platform
+### Task 12: 모니터링 및 관찰성
+- **상태**: 대기 중
+- **설명**: 포괄적인 모니터링 및 로깅 구현
 
-### Task 13: MOJI Integration
-- **Status**: Pending
-- **Description**: Integrate MOJI with SMHACCP platform
-
-### Task 14: External Services
-- **Status**: Pending
-- **Description**: Integrate with Monday.com, Notion, Google Workspace
-
-### Task 15: Monitoring & Observability
-- **Status**: Pending
-- **Description**: Implement comprehensive monitoring and logging
-
-## Current Project Structure
+## 현재 프로젝트 구조
 
 ```
 agentmoji/
 ├── app/
-│   ├── adapters/          # Platform adapters (Teams, KakaoTalk, WebChat)
-│   ├── agents/            # Multi-agent system implementation
-│   ├── api/v1/           # API endpoints
-│   ├── core/             # Core utilities and configuration
-│   ├── llm/              # LLM router and providers
-│   ├── rag/              # RAG pipeline implementation
-│   ├── vectorstore/      # Vector store implementations
-│   └── static/           # Static files for web UI
-├── tests/                # Test files
-├── docker-future/        # Docker files for future deployment
-└── script/               # Task descriptions and planning
+│   ├── adapters/          # 플랫폼 어댑터 (Teams, KakaoTalk, WebChat)
+│   ├── agents/            # 다중 에이전트 시스템 구현
+│   ├── api/v1/           # API 엔드포인트
+│   ├── core/             # 핵심 유틸리티 및 설정
+│   ├── llm/              # LLM 라우터 및 프로바이더
+│   ├── rag/              # RAG 파이프라인 구현
+│   ├── vectorstore/      # 벡터 스토어 구현
+│   └── static/           # 웹 UI용 정적 파일
+├── tests/                # 테스트 파일
+├── tools/                # 개발 유틸리티 도구
+├── docker-future/        # 향후 배포를 위한 Docker 파일
+├── docs/                 # 프로젝트 문서
+└── script/               # 작업 설명 및 계획
 ```
 
-## Key Implemented Features
+## 주요 구현 기능
 
-1. **Multi-Provider LLM Support**: Dynamic switching between DeepSeek, OpenAI, and custom endpoints
-2. **Platform Adapters**: Support for Teams, KakaoTalk, and Web Chat
-3. **Vector Storage**: Chroma DB integration with hybrid search
-4. **RAG Pipeline**: Document processing and retrieval system
-5. **Multi-Agent System**: Conversation and RAG agents with LangChain
-6. **RESTful API**: Comprehensive API with authentication endpoints
-7. **WebSocket Support**: Real-time communication for Web Chat
+1. **다중 프로바이더 LLM 지원**: DeepSeek, OpenAI, 커스텀 엔드포인트 간 동적 전환
+2. **플랫폼 어댑터**: Teams, KakaoTalk, 웹 챗 지원
+3. **벡터 스토리지**: 하이브리드 검색이 가능한 Chroma DB 통합
+4. **RAG 파이프라인**: 문서 처리 및 검색 시스템 (신뢰도 점수 포함)
+5. **다중 에이전트 시스템**: LangChain을 사용한 대화 및 RAG 에이전트
+6. **RESTful API**: 인증 엔드포인트가 있는 포괄적인 API
+7. **WebSocket 지원**: 웹 챗을 위한 실시간 통신
 
-## Next Steps
+## 리팩토링 성과
 
-1. **Immediate Priority**: 
-   - Task 10: Security & Authentication (JWT implementation)
-   - Task 11: Testing & Deployment (increase test coverage)
+1. **코드 통합**: 
+   - 중복 모델/스키마 30% 감소
+   - RAG 구현 통합 (3개 → 1개)
+   - 일관된 오류 처리 패턴
 
-2. **Phase 2 Development**:
-   - Task 12: SMHACCP Frontend development
-   - Task 13: MOJI Integration with SMHACCP
+2. **프로젝트 정리**:
+   - SMHACCP 관련 코드를 별도 프로젝트로 분리
+   - 테스트 유틸리티를 `tools/` 디렉토리로 구성
+   - 문서 통합 및 한글화
 
-3. **Advanced Features**:
-   - Task 9: Plugin System
-   - Task 14: External service integrations
-   - Task 15: Monitoring setup
+## 다음 단계
 
-## Testing Status
+1. **즉시 우선순위**: 
+   - Task 10: 보안 및 인증 (JWT 구현)
+   - Task 11: 테스트 및 배포 (테스트 커버리지 증대)
 
-- Unit tests implemented for:
-  - Adapters
-  - Vector stores
-  - LLM providers
-  - RAG pipeline
-  - Authentication
-  - Chat functionality
-  - Health checks
+2. **고급 기능**:
+   - Task 9: 플러그인 시스템
+   - Task 12: 모니터링 설정
 
-## Notes
+## 테스트 현황
 
-- The project has successfully completed the core MOJI agent functionality (Tasks 1-8)
-- Docker configurations have been moved to `docker-future/` for future deployment
-- The system is ready for security implementation and comprehensive testing
-- All MVP requirements from tasks 1-8 have been met
+- 단위 테스트 구현 완료:
+  - 어댑터
+  - 벡터 스토어
+  - LLM 프로바이더
+  - RAG 파이프라인
+  - 인증
+  - 채팅 기능
+  - 상태 확인
+
+## 참고사항
+
+- 프로젝트가 핵심 MOJI 에이전트 기능을 성공적으로 완료했습니다 (Tasks 1-8)
+- Docker 구성은 향후 배포를 위해 `docker-future/`로 이동되었습니다
+- 시스템은 보안 구현 및 포괄적인 테스트를 위한 준비가 되었습니다
+- 작업 1-8의 모든 MVP 요구사항이 충족되었습니다
+- SMHACCP 프로젝트는 별도로 진행될 예정입니다

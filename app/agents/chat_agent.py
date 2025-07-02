@@ -70,7 +70,7 @@ Current context:
         
         logger.info(f"Chat agent initialized with LLM: {llm_router.config.provider}")
     
-    async def process(self, messages: List[BaseMessage]) -> BaseMessage:
+    async def process(self, messages: List[BaseMessage], **kwargs) -> BaseMessage:
         """Process messages and return response"""
         try:
             # Get the last user message
@@ -85,9 +85,16 @@ Current context:
                 elif isinstance(msg, AIMessage):
                     self.memory.chat_memory.add_ai_message(msg.content)
             
-            # For MVP, return a simple response
-            # TODO: Integrate with actual LLM when available
-            response_content = await self._generate_response(last_message.content)
+            # Check if provider/model override is specified
+            provider = kwargs.get('provider')
+            model = kwargs.get('model')
+            
+            # Generate response with optional provider/model override
+            response_content = await self._generate_response(
+                last_message.content, 
+                provider=provider, 
+                model=model
+            )
             
             # Add the interaction to memory
             self.memory.chat_memory.add_user_message(last_message.content)
@@ -99,16 +106,29 @@ Current context:
             logger.error(f"Error processing message: {e}")
             return AIMessage(content="I'm sorry, I encountered an error processing your message.")
     
-    async def _generate_response(self, input_text: str) -> str:
+    async def _generate_response(self, input_text: str, provider: Optional[str] = None, model: Optional[str] = None) -> str:
         """Generate response using LLM"""
         if not self.chain:
             # Fallback if chain not initialized
             return f"I received your message: '{input_text}'. The LLM is not yet initialized."
         
         try:
-            # Use the chain to generate response
-            response = await self.chain.arun(input=input_text)
-            return response
+            # If provider/model override is specified, use LLM router directly
+            if provider or model:
+                from app.llm.router import llm_router
+                from langchain_core.messages import HumanMessage
+                
+                # Generate with specific provider/model
+                response = await llm_router.generate(
+                    [HumanMessage(content=input_text)],
+                    provider=provider,
+                    model=model
+                )
+                return response.content
+            else:
+                # Use the chain to generate response with default settings
+                response = await self.chain.arun(input=input_text)
+                return response
         except Exception as e:
             logger.error(f"LLM generation error: {e}")
             return "I apologize, but I encountered an error generating a response."

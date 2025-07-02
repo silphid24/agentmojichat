@@ -11,7 +11,10 @@
       "Bash(sed:*)",
       "Bash(chmod:*)",
       "Bash(pip install:*)",
-      "Bash(python3 -m pip install:*)"
+      "Bash(python3 -m pip install:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(python3:*)"
     ],
     "deny": []
   }

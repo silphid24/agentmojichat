@@ -1,6 +1,8 @@
 """Enhanced RAG Pipeline with Query Rewriting and Confidence Scoring"""
 
 import os
+import time
+import asyncio
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 import hashlib
@@ -16,6 +18,24 @@ from langchain.prompts import PromptTemplate
 
 from app.llm.router import llm_router
 from app.core.logging import logger
+from app.core.cache import (
+    get_cached_query_result, cache_query_result,
+    get_cached_embedding, cache_embedding,
+    get_cached_llm_response, cache_llm_response
+)
+from app.core.async_utils import (
+    ParallelSearchManager, AsyncBatchProcessor,
+    async_retry, async_timeout
+)
+from app.core.adaptive_features import (
+    analyze_query_complexity, get_optimal_search_config,
+    response_time_tracker, adaptive_feature_manager
+)
+from app.core.model_optimization import (
+    get_optimized_embedding_model, model_manager,
+    adaptive_selector, warm_up_all_models
+)
+from app.core.monitoring import performance_monitor, timer
 
 
 class EnhancedRAGPipeline:
@@ -37,10 +57,19 @@ class EnhancedRAGPipeline:
         
         # Initialize components
         from app.core.config import settings
-        self.embeddings = OpenAIEmbeddings(
-            openai_api_key=settings.llm_api_key,
-            model="text-embedding-3-small"  # OpenAI's small embedding model
-        )
+        
+        # Use optimized embedding model (싱글톤 패턴으로 공유)
+        try:
+            self.embeddings = get_optimized_embedding_model()
+            logger.info("Using optimized embedding model")
+        except Exception as e:
+            logger.warning(f"Failed to get optimized embedding model, using fallback: {e}")
+            from app.core.cached_embeddings import CachedOpenAIEmbeddings
+            api_key = settings.openai_api_key or settings.llm_api_key
+            self.embeddings = CachedOpenAIEmbeddings(
+                openai_api_key=api_key,
+                model="text-embedding-3-small"  # OpenAI's small embedding model
+            )
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
@@ -54,6 +83,10 @@ class EnhancedRAGPipeline:
             embedding_function=self.embeddings,
             persist_directory=str(self.vectordb_dir),
         )
+        
+        # 병렬 처리 관리자들
+        self.parallel_search_manager = ParallelSearchManager(max_concurrent=4)
+        self.batch_processor = AsyncBatchProcessor(batch_size=10, max_concurrent=3)
         
         # Query rewriting prompt
         self.query_rewrite_prompt = PromptTemplate(
@@ -177,9 +210,16 @@ If the context doesn't contain relevant information, say so clearly.""",
             logger.error(f"Error loading document {file_path}: {e}")
             return []
     
-    async def rewrite_query(self, query: str) -> List[str]:
+    async def rewrite_query(self, query: str, force_rewrite: bool = False) -> List[str]:
         """Rewrite query to improve search results"""
         try:
+            # 적응형 결정: 쿼리 재작성 필요 여부 확인
+            if not force_rewrite:
+                optimal_config = get_optimal_search_config(query)
+                if not optimal_config["use_query_rewriting"]:
+                    logger.info("Query rewriting skipped based on adaptive analysis")
+                    return [query]
+            
             # Get LLM
             llm = await llm_router.get_langchain_model()
             
@@ -205,27 +245,20 @@ If the context doesn't contain relevant information, say so clearly.""",
     async def search_with_rewriting(
         self, 
         query: str, 
-        k: int = 5,
-        score_threshold: float = 1.6
+        k: int = 2, #문서 참조 걔수 
+        score_threshold: float = 1.2,
+        use_parallel_search: bool = True
     ) -> Tuple[List[Document], Dict[str, Any]]:
         """Search with query rewriting and relevance scoring"""
         try:
             # Rewrite query
             queries = await self.rewrite_query(query)
             
-            # Search with all query variations
-            all_results = []
-            seen_chunks = set()
-            
-            for q in queries:
-                results = self.vectorstore.similarity_search_with_score(q, k=k*2)  # Get more results initially
-                
-                for doc, score in results:
-                    chunk_id = doc.metadata.get('chunk_id')
-                    # ChromaDB uses distance scores - lower is better
-                    if chunk_id not in seen_chunks and score <= score_threshold:
-                        seen_chunks.add(chunk_id)
-                        all_results.append((doc, score, q))
+            # Search with all query variations (병렬 또는 순차)
+            if use_parallel_search and len(queries) > 1:
+                all_results = await self._parallel_vector_search(queries, k, score_threshold)
+            else:
+                all_results = await self._sequential_vector_search(queries, k, score_threshold)
             
             # Sort by score (ascending - lower distance is better)
             all_results.sort(key=lambda x: x[1])
@@ -258,18 +291,147 @@ If the context doesn't contain relevant information, say so clearly.""",
             logger.error(f"Error in search with rewriting: {e}")
             return [], {"error": str(e)}
     
+    async def _parallel_vector_search(
+        self, 
+        queries: List[str], 
+        k: int, 
+        score_threshold: float
+    ) -> List[Tuple[Document, float, str]]:
+        """병렬 벡터 검색 실행"""
+        try:
+            # 각 쿼리에 대한 검색 태스크 생성
+            search_tasks = []
+            for query in queries:
+                task = self._single_vector_search(query, k*2, score_threshold)
+                search_tasks.append(task)
+            
+            # 병렬 실행
+            start_time = time.time()
+            results_per_query = await asyncio.gather(*search_tasks, return_exceptions=True)
+            elapsed_time = time.time() - start_time
+            
+            logger.info(f"Parallel vector search completed in {elapsed_time:.3f}s for {len(queries)} queries")
+            
+            # 결과 통합 및 중복 제거
+            all_results = []
+            seen_chunks = set()
+            
+            for i, results in enumerate(results_per_query):
+                if isinstance(results, Exception):
+                    logger.error(f"Search failed for query '{queries[i]}': {results}")
+                    continue
+                
+                for doc, score in results:
+                    chunk_id = doc.metadata.get('chunk_id')
+                    if chunk_id not in seen_chunks:
+                        seen_chunks.add(chunk_id)
+                        all_results.append((doc, score, queries[i]))
+            
+            return all_results
+            
+        except Exception as e:
+            logger.error(f"Parallel vector search error: {e}")
+            # 폴백: 순차 검색
+            return await self._sequential_vector_search(queries, k, score_threshold)
+    
+    async def _sequential_vector_search(
+        self, 
+        queries: List[str], 
+        k: int, 
+        score_threshold: float
+    ) -> List[Tuple[Document, float, str]]:
+        """순차 벡터 검색 실행"""
+        all_results = []
+        seen_chunks = set()
+        
+        for q in queries:
+            try:
+                results = await self._single_vector_search(q, k*2, score_threshold)
+                
+                for doc, score in results:
+                    chunk_id = doc.metadata.get('chunk_id')
+                    if chunk_id not in seen_chunks:
+                        seen_chunks.add(chunk_id)
+                        all_results.append((doc, score, q))
+                        
+            except Exception as e:
+                logger.error(f"Sequential search failed for query '{q}': {e}")
+                continue
+        
+        return all_results
+    
+    async def _single_vector_search(
+        self, 
+        query: str, 
+        k: int, 
+        score_threshold: float
+    ) -> List[Tuple[Document, float]]:
+        """단일 쿼리 벡터 검색"""
+        try:
+            # 비동기 실행을 위해 스레드풀에서 실행
+            loop = asyncio.get_event_loop()
+            results = await loop.run_in_executor(
+                None, 
+                lambda: self.vectorstore.similarity_search_with_score(query, k=k)
+            )
+            
+            # 점수 필터링
+            filtered_results = [
+                (doc, score) for doc, score in results 
+                if score <= score_threshold
+            ]
+            
+            return filtered_results
+            
+        except Exception as e:
+            logger.error(f"Single vector search error for query '{query}': {e}")
+            return []
+    
     async def answer_with_confidence(
         self, 
         query: str,
         k: int = 5,
-        score_threshold: float = 0.7
+        score_threshold: float = 0.7,
+        context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Generate answer with confidence scoring and source citations"""
+        # 성능 추적 시작
+        request_id = f"rag_{int(time.time() * 1000)}"
+        response_time_tracker.start_tracking(request_id)
+        start_time = time.time()
+        
+        # 모니터링 시작
+        monitoring_request_id = performance_monitor.record_request_start(request_id, "rag_query")
+        
         try:
-            # Search for relevant documents
+            # 1. 쿼리 분석 및 최적 설정 결정
+            optimal_config = get_optimal_search_config(query, context)
+            logger.info(f"Adaptive config: {optimal_config}")
+            
+            # 2. 캐시 조회 먼저 시도
+            search_params = {
+                "k": k, 
+                "score_threshold": score_threshold,
+                "config": optimal_config
+            }
+            cached_result = await get_cached_query_result(query, search_params)
+            if cached_result:
+                # 캐시 히트 시간 기록
+                elapsed_time = response_time_tracker.end_tracking(request_id)
+                adaptive_feature_manager.record_performance(elapsed_time)
+                logger.info(f"Cache hit for query: {query[:50]}... ({elapsed_time:.3f}s)")
+                return cached_result
+            
+            # 3. 적응형 설정에 따른 문서 검색
             documents, search_metadata = await self.search_with_rewriting(
-                query, k=k, score_threshold=score_threshold
+                query, 
+                k=k, 
+                score_threshold=score_threshold, 
+                use_parallel_search=optimal_config["use_parallel_search"]
             )
+            
+            # 검색 메타데이터에 적응형 정보 추가
+            search_metadata["adaptive_config"] = optimal_config
             
             if not documents:
                 return {
@@ -288,12 +450,20 @@ If the context doesn't contain relevant information, say so clearly.""",
             
             context = "\n\n".join(context_parts)
             
-            # Generate answer with simpler prompt
-            llm = await llm_router.get_langchain_model()
+            # LLM 응답 캐시 조회
+            llm_params = {"model": "default", "context_length": len(context)}
+            cached_llm_response = await get_cached_llm_response(f"{query}||{context[:500]}", llm_params)
             
-            # Use a simpler prompt for better compatibility
-            simple_prompt = PromptTemplate(
-                template="""다음 문맥을 바탕으로 질문에 정확하고 자세하게 답변해주세요.
+            if cached_llm_response:
+                answer_text = cached_llm_response
+                logger.info(f"LLM cache hit for query: {query[:30]}...")
+            else:
+                # Generate answer with simpler prompt
+                llm = await llm_router.get_langchain_model()
+                
+                # Use a simpler prompt for better compatibility
+                simple_prompt = PromptTemplate(
+                    template="""다음 문맥을 바탕으로 질문에 정확하고 자세하게 답변해주세요.
 
 문맥:
 {context}
@@ -301,14 +471,17 @@ If the context doesn't contain relevant information, say so clearly.""",
 질문: {question}
 
 답변:""",
-                input_variables=["context", "question"]
-            )
-            
-            chain = LLMChain(llm=llm, prompt=simple_prompt)
-            result = await chain.ainvoke({"context": context, "question": query})
-            
-            # Get the answer text
-            answer_text = result["text"].strip()
+                    input_variables=["context", "question"]
+                )
+                
+                chain = LLMChain(llm=llm, prompt=simple_prompt)
+                result = await chain.ainvoke({"context": context, "question": query})
+                
+                # Get the answer text
+                answer_text = result["text"].strip()
+                
+                # LLM 응답 캐시 저장 (1시간 TTL)
+                await cache_llm_response(f"{query}||{context[:500]}", answer_text, llm_params, ttl=3600)
             
             # Simple confidence scoring based on answer length and content
             confidence = "HIGH" if len(answer_text) > 100 else "MEDIUM" if len(answer_text) > 50 else "LOW"
@@ -319,18 +492,58 @@ If the context doesn't contain relevant information, say so clearly.""",
                 for doc in documents
             ]))
             
-            return {
+            # 최종 결과 구성
+            final_result = {
                 "answer": answer_text,
                 "confidence": confidence,
                 "reasoning": f"답변이 {len(documents)}개의 관련 문서를 바탕으로 생성되었습니다.",
                 "sources": source_files,
                 "search_metadata": search_metadata,
                 "context_used": len(documents),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
+                "processing_time": f"{time.time() - start_time:.3f}s"
             }
+            
+            # 성능 추적 완료
+            elapsed_time = response_time_tracker.end_tracking(request_id)
+            adaptive_feature_manager.record_performance(elapsed_time)
+            
+            # 모니터링 완료 (성공)
+            performance_monitor.record_request_end(
+                monitoring_request_id, 
+                success=True, 
+                operation="rag_query",
+                additional_metrics={
+                    "documents_retrieved": len(documents),
+                    "processing_mode": optimal_config["complexity"],
+                    "cache_used": "cache_hit" in final_result.get("reasoning", "")
+                }
+            )
+            
+            # 최종 결과에 성능 정보 추가
+            final_result.update({
+                "adaptive_config": optimal_config,
+                "actual_processing_time": f"{elapsed_time:.3f}s",
+                "estimated_vs_actual": f"estimated: {optimal_config['estimated_time']:.1f}s, actual: {elapsed_time:.1f}s",
+                "performance_mode": optimal_config["processing_mode"]
+            })
+            
+            # 결과를 캐시에 저장 (30분 TTL)
+            await cache_query_result(query, final_result, search_params, ttl=1800)
+            logger.info(f"Adaptive query processed: {query[:50]}... ({elapsed_time:.3f}s, mode: {optimal_config['processing_mode']})")
+            
+            return final_result
             
         except Exception as e:
             logger.error(f"Error generating answer: {e}")
+            
+            # 모니터링 완료 (실패)
+            performance_monitor.record_request_end(
+                monitoring_request_id, 
+                success=False, 
+                operation="rag_query"
+            )
+            
             return {
                 "answer": f"오류가 발생했습니다: {str(e)}",
                 "confidence": "LOW",
@@ -364,3 +577,14 @@ If the context doesn't contain relevant information, say so clearly.""",
 
 # Global instance
 rag_pipeline = EnhancedRAGPipeline()
+
+# Hybrid search integration
+_hybrid_pipeline = None
+
+def get_hybrid_pipeline():
+    """하이브리드 검색 파이프라인 인스턴스 반환"""
+    global _hybrid_pipeline
+    if _hybrid_pipeline is None:
+        from app.rag.hybrid_search import HybridRAGPipeline
+        _hybrid_pipeline = HybridRAGPipeline(rag_pipeline)
+    return _hybrid_pipeline

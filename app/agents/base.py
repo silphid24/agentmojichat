@@ -28,7 +28,7 @@ class BaseAgent(ABC):
         logger.info(f"Initialized agent: {name} ({agent_id})")
     
     @abstractmethod
-    async def process(self, messages: List[BaseMessage]) -> BaseMessage:
+    async def process(self, messages: List[BaseMessage], **kwargs) -> BaseMessage:
         """Process messages and return response"""
         pass
     

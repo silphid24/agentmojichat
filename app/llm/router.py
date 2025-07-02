@@ -7,6 +7,7 @@ from langchain.chat_models.base import BaseChatModel
 from app.llm.base import BaseLLMProvider, LLMConfig, LLMResponse
 from app.llm.providers.deepseek import DeepSeekProvider
 from app.llm.providers.openai import OpenAIProvider
+from app.llm.providers.anthropic import AnthropicProvider
 from app.llm.providers.custom import CustomProvider
 from app.core.config import settings
 from app.core.logging import logger
@@ -20,7 +21,10 @@ class LLMRouter:
     PROVIDERS: Dict[str, Type[BaseLLMProvider]] = {
         "deepseek": DeepSeekProvider,
         "openai": OpenAIProvider,
-        "custom": CustomProvider
+        "anthropic": AnthropicProvider,
+        "custom": CustomProvider,
+        "deepseek-local": CustomProvider,  # Local DeepSeek R1 7B
+        "exaone-local": CustomProvider     # Local EXAONE
     }
     
     def __init__(self):
@@ -35,11 +39,27 @@ class LLMRouter:
             self.config = config
         else:
             # Load from environment variables
+            provider = settings.llm_provider
+            api_key = settings.llm_api_key
+            api_base = settings.llm_api_base
+            
+            # Handle provider-specific API keys
+            if provider == "openai":
+                api_key = settings.openai_api_key or settings.llm_api_key
+            elif provider == "anthropic":
+                api_key = settings.anthropic_api_key or settings.llm_api_key
+            elif provider == "deepseek-local":
+                api_key = "not-needed"
+                api_base = settings.deepseek_local_url
+            elif provider == "exaone-local":
+                api_key = "not-needed"
+                api_base = settings.exaone_local_url
+            
             self.config = LLMConfig(
-                provider=settings.llm_provider,
+                provider=provider,
                 model=settings.llm_model,
-                api_key=settings.llm_api_key,
-                api_base=settings.llm_api_base,
+                api_key=api_key,
+                api_base=api_base,
                 temperature=0.7,
                 max_tokens=1024,
                 timeout=30,
@@ -61,12 +81,50 @@ class LLMRouter:
                 provider=provider_name
             )
         
-        # Create provider instance if not exists
-        if provider_name not in self.providers:
-            provider_class = self.PROVIDERS[provider_name]
-            provider = provider_class(self.config)
-            await provider.initialize()
-            self.providers[provider_name] = provider
+        # Always create a new provider instance to ensure fresh config
+        provider_class = self.PROVIDERS[provider_name]
+        
+        # Special handling for local models
+        if provider_name == "deepseek-local":
+            config = LLMConfig(
+                provider=provider_name,
+                model=self.config.model,
+                api_key="not-needed",  # Local models don't need API keys
+                api_base=settings.deepseek_local_url or "http://localhost:11434/v1",
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+                timeout=self.config.timeout,
+                retry_count=self.config.retry_count
+            )
+            provider = provider_class(config)
+        elif provider_name == "exaone-local":
+            config = LLMConfig(
+                provider=provider_name,
+                model=self.config.model,
+                api_key="not-needed",  # Local models don't need API keys
+                api_base=settings.exaone_local_url or "http://localhost:11435/v1",
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+                timeout=self.config.timeout,
+                retry_count=self.config.retry_count
+            )
+            provider = provider_class(config)
+        else:
+            # Use current config for other providers (but ensure it uses the right values)
+            config = LLMConfig(
+                provider=self.config.provider,
+                model=self.config.model,
+                api_key=self.config.api_key,
+                api_base=self.config.api_base,
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+                timeout=self.config.timeout,
+                retry_count=self.config.retry_count
+            )
+            provider = provider_class(config)
+        
+        await provider.initialize()
+        self.providers[provider_name] = provider
         
         self.current_provider = self.providers[provider_name]
     
@@ -143,14 +201,39 @@ class LLMRouter:
                 provider=provider_name
             )
         
-        # Update config
+        # Get proper API key and base URL for the provider
+        api_key = settings.llm_api_key
+        api_base = None
+        
+        if provider_name == "openai":
+            api_key = settings.openai_api_key or settings.llm_api_key
+            api_base = "https://api.openai.com/v1"
+        elif provider_name == "anthropic":
+            api_key = settings.anthropic_api_key or settings.llm_api_key
+            api_base = "https://api.anthropic.com"
+        elif provider_name == "deepseek":
+            api_key = settings.llm_api_key
+            api_base = "https://api.deepseek.com/v1"
+        elif provider_name == "deepseek-local":
+            api_key = "not-needed"
+            api_base = settings.deepseek_local_url
+        elif provider_name == "exaone-local":
+            api_key = "not-needed"
+            api_base = settings.exaone_local_url
+        elif provider_name == "custom":
+            api_key = settings.llm_api_key
+            api_base = settings.llm_api_base
+        
+        # Update config with proper values
         self.config.provider = provider_name
+        self.config.api_key = api_key
+        self.config.api_base = api_base
         if model:
             self.config.model = model
         
         # Initialize new provider
         await self._initialize_provider(provider_name)
-        logger.info(f"Switched to provider: {provider_name}")
+        logger.info(f"Switched to provider: {provider_name} with base URL: {api_base}")
     
     async def validate_all_providers(self) -> Dict[str, bool]:
         """Validate connections for all configured providers"""
@@ -159,16 +242,39 @@ class LLMRouter:
         for provider_name in self.PROVIDERS:
             try:
                 # Skip if no API key configured for this provider
-                if provider_name == "openai" and not settings.llm_api_key:
+                if provider_name == "openai" and not (settings.openai_api_key or settings.llm_api_key):
                     results[provider_name] = False
                     continue
+                elif provider_name == "anthropic" and not settings.anthropic_api_key:
+                    results[provider_name] = False
+                    continue
+                elif provider_name in ["deepseek-local", "exaone-local"]:
+                    # Local models don't need API keys
+                    pass
                 
-                # Create temporary config
+                # Create temporary config with proper API key
+                api_key = settings.llm_api_key
+                api_base = None
+                
+                if provider_name == "openai":
+                    api_key = settings.openai_api_key or settings.llm_api_key
+                    api_base = "https://api.openai.com/v1"
+                elif provider_name == "anthropic":
+                    api_key = settings.anthropic_api_key
+                elif provider_name == "deepseek-local":
+                    api_key = "not-needed"
+                    api_base = settings.deepseek_local_url
+                elif provider_name == "exaone-local":
+                    api_key = "not-needed"
+                    api_base = settings.exaone_local_url
+                elif provider_name == "custom":
+                    api_base = settings.llm_api_base
+                
                 temp_config = LLMConfig(
                     provider=provider_name,
                     model=self._get_default_model(provider_name),
-                    api_key=settings.llm_api_key,
-                    api_base=settings.llm_api_base if provider_name == "custom" else None
+                    api_key=api_key,
+                    api_base=api_base
                 )
                 
                 # Create and test provider
@@ -188,8 +294,11 @@ class LLMRouter:
         """Get default model for provider"""
         defaults = {
             "deepseek": "deepseek-r1",
-            "openai": "gpt-3.5-turbo",
-            "custom": "llama-3"
+            "openai": "gpt-4",
+            "anthropic": "claude-3-5-sonnet-20241022",
+            "custom": "llama-3",
+            "deepseek-local": "deepseek-r1:7b",
+            "exaone-local": "exaone:latest"
         }
         return defaults.get(provider, "unknown")
     

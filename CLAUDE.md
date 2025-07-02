@@ -7,9 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the MOJI AI Agent & SMHACCP Project Management Platform - a two-phase project to build:
-1. **MOJI**: A multi-platform AI assistant supporting Slack, Teams, KakaoTalk, Discord, and Web Chat
-2. **SMHACCP Platform**: A project management system integrating MOJI for natural language interfaces
+This is the MOJI AI Agent - a multi-platform AI assistant supporting Slack, Teams, KakaoTalk, Discord, and Web Chat.
+
+Note: The SMHACCP Project Management Platform (previously Phase 2) has been moved to a separate project. 
+See SMHACCP_PROJECT_GUIDE.md for migration guidance.
 
 ## Development Approach
 
@@ -36,10 +37,10 @@ Follow the numbered tasks in `/script/task_*.txt`:
   - `LLM_API_BASE`: 커스텀 API 엔드포인트 URL
   - `LLM_API_KEY`: API 인증 키
 
-### Frontend (Phase 2)
-- **Framework**: Next.js 14, TypeScript 5
-- **UI**: Tailwind CSS 3, Shadcn/ui
-- **State**: Zustand, React Query v5
+### Frontend Support
+- Web Chat widget (static HTML/JS)
+- Platform-specific integrations
+- API client examples
 
 ## Development Principles (from `/cursor/rules/global.mdc`)
 
@@ -110,19 +111,14 @@ agentmoji/
 
 ## Key Implementation Notes
 
-### Phase 1: MOJI Agent
+### MOJI Agent Development
 - Start with single LangChain agent (not LangGraph multi-agent initially)
 - Use DeepSeek API as default, but support model switching via environment variables
 - LLM provider abstraction layer for easy API switching (DeepSeek, OpenAI, Anthropic, custom endpoints)
 - Basic RAG with text files only (TXT, Markdown)
 - Simple JWT authentication (no OAuth flow initially)
 - Docker deployment (defer Kubernetes)
-
-### Phase 2: SMHACCP Platform
-- Basic Next.js setup with TypeScript
-- MOJI integration via API client
-- Focus on Monday.com integration first
-- Simple dashboards with Recharts
+- Platform adapters for Slack, Teams, KakaoTalk, Discord, WebChat
 
 ## Common Development Tasks
 
@@ -148,8 +144,8 @@ Since this is a new project without implemented code yet, the first tasks will b
 
 ## Important Reminders
 
-- This project is in the planning phase - no code exists yet
-- Always check task files for MVP vs Future Development features
+- MOJI is now the sole focus of this repository
+- SMHACCP platform has been moved to a separate project
 - Follow test-first approach for core logic
 - Maintain clean architecture with proper layer separation
 - Target 80% test coverage minimum

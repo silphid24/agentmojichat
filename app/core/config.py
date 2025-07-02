@@ -33,8 +33,14 @@ class Settings(BaseSettings):
     llm_api_base: Optional[str] = Field(default=None, env="LLM_API_BASE")
     llm_api_key: str = Field(default="", env="LLM_API_KEY")
     
-    # Monday.com Integration (임시로 추가)
-    monday_api_key: Optional[str] = Field(default=None, env="MONDAY_API_KEY")
+    # Additional API Keys
+    openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
+    anthropic_api_key: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
+    
+    # Local Model URLs
+    deepseek_local_url: Optional[str] = Field(default="http://localhost:11434/v1", env="DEEPSEEK_LOCAL_URL")
+    exaone_local_url: Optional[str] = Field(default="http://localhost:11435/v1", env="EXAONE_LOCAL_URL")
+    
     
     # Security
     secret_key: str = Field(

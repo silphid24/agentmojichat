@@ -25,7 +25,22 @@ class MojiWebChat {
             input: document.getElementById('message-input'),
             sendButton: document.getElementById('send-button'),
             status: document.getElementById('connection-status'),
-            typingIndicator: document.getElementById('typing-indicator')
+            typingIndicator: document.getElementById('typing-indicator'),
+            modelSelector: document.getElementById('model-selector'),
+            providerSelector: document.getElementById('provider-selector'),
+            ragToggle: document.getElementById('rag-toggle')
+        };
+        
+        // Model configuration
+        this.currentProvider = 'custom';  // Default to workstation LLM
+        this.currentModel = 'your-model-name';
+        this.providers = {
+            'openai': { name: 'OpenAI', icon: '🤖', models: [] },
+            'anthropic': { name: 'Anthropic', icon: '🧠', models: [] },
+            'custom': { name: 'Workstation LLM', icon: '🖥️', models: [] },
+            'deepseek': { name: 'DeepSeek', icon: '🚀', models: [] },
+            'deepseek-local': { name: 'DeepSeek (Local)', icon: '💻', models: [] },
+            'exaone-local': { name: 'EXAONE (Local)', icon: '🔮', models: [] }
         };
         
         this.setupEventListeners();
@@ -63,6 +78,9 @@ class MojiWebChat {
         // Update UI
         this.updateStatus('연결됨', 'connected');
         this.enableInput();
+        
+        // Load available providers and models
+        this.loadProviders();
         
         // Send queued messages
         while (this.messageQueue.length > 0) {
@@ -133,11 +151,14 @@ class MojiWebChat {
         // Add user message to chat
         this.addMessage(text, 'user');
         
-        // Send to server
+        // Send to server with model info and RAG setting
         const message = {
             type: 'text',
             text: text,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            provider: this.currentProvider,
+            model: this.currentModel,
+            useRag: this.elements.ragToggle ? this.elements.ragToggle.checked : true
         };
         
         this.ws.send(JSON.stringify(message));
@@ -332,6 +353,127 @@ class MojiWebChat {
                     this.sendMessage(this.elements.input.value);
                 }
             });
+        }
+        
+        // Provider selector
+        if (this.elements.providerSelector) {
+            this.elements.providerSelector.addEventListener('change', async (e) => {
+                await this.switchProvider(e.target.value);
+            });
+        }
+        
+        // Model selector
+        if (this.elements.modelSelector) {
+            this.elements.modelSelector.addEventListener('change', (e) => {
+                this.currentModel = e.target.value;
+                this.updateModelInfo();
+            });
+        }
+        
+        // RAG toggle
+        if (this.elements.ragToggle) {
+            this.elements.ragToggle.addEventListener('change', (e) => {
+                const ragStatus = e.target.checked ? 'ON' : 'OFF';
+                this.addMessage(`RAG 모드: ${ragStatus}`, 'system');
+            });
+        }
+    }
+    
+    async loadProviders() {
+        try {
+            // Get current LLM info (use public endpoint to avoid auth)
+            const response = await fetch('/api/v1/llm/info/public');
+            
+            if (response.ok) {
+                const info = await response.json();
+                // Don't override our current selection, just load models
+                // this.currentProvider = info.provider;
+                // this.currentModel = info.model;
+                
+                // Load models for each provider
+                for (const provider of Object.keys(this.providers)) {
+                    await this.loadModelsForProvider(provider);
+                }
+                
+                this.updateProviderUI();
+            } else {
+                // If public endpoint fails, just load models anyway
+                for (const provider of Object.keys(this.providers)) {
+                    await this.loadModelsForProvider(provider);
+                }
+                this.updateProviderUI();
+            }
+        } catch (error) {
+            console.error('Failed to load providers:', error);
+            // Still try to update UI with default values
+            this.updateProviderUI();
+        }
+    }
+    
+    async loadModelsForProvider(provider) {
+        try {
+            const response = await fetch(`/api/v1/llm/models/${provider}/public`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                this.providers[provider].models = data.models;
+            }
+        } catch (error) {
+            console.error(`Failed to load models for ${provider}:`, error);
+        }
+    }
+    
+    async switchProvider(provider) {
+        this.currentProvider = provider;
+        const models = this.providers[provider].models;
+        
+        if (models.length > 0) {
+            this.currentModel = models[0].id;
+            this.updateModelSelector();
+            
+            // For WebSocket-based chat, we don't need to switch on backend
+            // The provider/model will be sent with each message
+            this.addMessage(`모델 변경: ${this.providers[provider].name} - ${models[0].name}`, 'system');
+        }
+    }
+    
+    updateProviderUI() {
+        if (!this.elements.providerSelector) return;
+        
+        // Update provider selector
+        this.elements.providerSelector.innerHTML = Object.entries(this.providers)
+            .map(([key, provider]) => `
+                <option value="${key}" ${key === this.currentProvider ? 'selected' : ''}>
+                    ${provider.icon} ${provider.name}
+                </option>
+            `).join('');
+        
+        this.updateModelSelector();
+    }
+    
+    updateModelSelector() {
+        if (!this.elements.modelSelector) return;
+        
+        const models = this.providers[this.currentProvider].models;
+        this.elements.modelSelector.innerHTML = models
+            .map(model => `
+                <option value="${model.id}" ${model.id === this.currentModel ? 'selected' : ''}>
+                    ${model.name}
+                </option>
+            `).join('');
+        
+        this.updateModelInfo();
+    }
+    
+    updateModelInfo() {
+        const provider = this.providers[this.currentProvider];
+        const model = provider.models.find(m => m.id === this.currentModel);
+        
+        if (model && this.elements.status) {
+            const isLocal = this.currentProvider.includes('local');
+            const statusIcon = isLocal ? '💻' : '☁️';
+            const statusText = `${provider.icon} ${model.name} ${statusIcon}`;
+            this.elements.status.textContent = statusText;
         }
     }
     
