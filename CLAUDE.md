@@ -1,6 +1,24 @@
-# CLAUDE.md
+# CLAUDE.md (2024 최신)
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+이 문서는 MOJI 프로젝트의 개발 가이드, 코드 품질, 테스트, 성능, 문서화, 최신 기능(WebChat v2, 하이브리드 검색 등) 기준을 안내합니다.
+
+## 개발 지침
+- `/cursor/rules/global.mdc`의 원칙을 반드시 준수
+- 테스트 우선(TDD), SOLID, 클린 아키텍처, 코드 리뷰, 성능 기준, 보안, 문서화
+- PR 전 셀프 리뷰, 커밋 메시지 명확화, 브랜치 전략 준수
+
+## 기술 스택
+- Python 3.11+, FastAPI 0.111, LangChain 0.2.x, PostgreSQL 15, Redis 7, Chroma DB
+- DeepSeek, OpenAI, Anthropic, 커스텀 LLM, WebChat v2, 하이브리드 검색, 적응형 기능
+
+## 구현/테스트 원칙
+- 테스트 커버리지 80% 이상, 단위/통합/성능 테스트
+- WebChat v2, 하이브리드 검색, 실시간 모니터링 등 실제 시나리오 기반 테스트
+- 성능 기준: API 응답 200ms 이내, 페이지 로드 3초 이내
+
+## 코드 품질/리팩토링/디버깅/리뷰/에러 처리/성능/문서화 등은 기존 원칙을 유지하되, 최신 기능과 실제 구현 상태를 반영해 보강
+
+## 프로젝트 구조/공통 작업/중요 리마인더 등은 기존 예시를 최신화하여 유지
 
 ## Important: Development Guidelines
 이 프로젝트는 `/cursor/rules/global.mdc`에 정의된 개발 지침을 따릅니다. 코드 작성 전 반드시 해당 파일을 참고하세요.

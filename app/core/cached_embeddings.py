@@ -15,8 +15,8 @@ class CachedOpenAIEmbeddings(OpenAIEmbeddings):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # 캐시 통계를 별도 딕셔너리로 관리
-        self._cache_stats = {
+        # 캐시 통계를 별도 속성으로 관리 (Pydantic 필드와 충돌 방지)
+        self.__dict__['_cache_stats'] = {
             "hits": 0,
             "misses": 0,
             "batch_size": 100

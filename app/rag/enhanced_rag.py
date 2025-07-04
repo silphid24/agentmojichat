@@ -48,12 +48,15 @@ class EnhancedRAGPipeline:
         collection_name: str = "moji_documents",
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
+        use_faiss_fallback: bool = True,
     ):
         self.documents_dir = Path(documents_dir)
         self.vectordb_dir = Path(vectordb_dir)
         self.collection_name = collection_name
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.use_faiss_fallback = use_faiss_fallback
+        self.faiss_retriever = None
         
         # Initialize components
         from app.core.config import settings
@@ -77,12 +80,60 @@ class EnhancedRAGPipeline:
             separators=["\n\n", "\n", " ", ""]
         )
         
-        # Initialize or load vector store
-        self.vectorstore = Chroma(
-            collection_name=collection_name,
-            embedding_function=self.embeddings,
-            persist_directory=str(self.vectordb_dir),
-        )
+        # Initialize vector store with fallback mechanism
+        try:
+            # Try persistent storage first with proper directory setup
+            persist_dir = Path(self.vectordb_dir)
+            persist_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Set proper permissions
+            import os
+            os.chmod(str(persist_dir), 0o755)
+            
+            # Initialize with persistent storage
+            self.vectorstore = Chroma(
+                collection_name=collection_name,
+                embedding_function=self.embeddings,
+                persist_directory=str(persist_dir),
+            )
+            
+            # Test write access by trying to get collection info
+            try:
+                self.vectorstore._collection.count()
+                logger.info(f"Using persistent Chroma store at: {persist_dir}")
+                self._is_persistent = True
+                self._using_faiss = False
+            except Exception as write_test_error:
+                logger.warning(f"Write test failed: {write_test_error}, falling back to in-memory")
+                raise write_test_error
+                
+        except Exception as e:
+            logger.warning(f"Failed to create persistent Chroma store: {e}")
+            
+            if self.use_faiss_fallback:
+                logger.info("Attempting FAISS fallback")
+                try:
+                    from app.rag.retriever import VectorRetriever
+                    self.faiss_retriever = VectorRetriever(
+                        embeddings=self.embeddings,
+                        index_path=str(self.vectordb_dir.parent / "faiss_index")
+                    )
+                    logger.info("Successfully initialized FAISS fallback")
+                    self.vectorstore = None  # Use FAISS instead
+                    self._is_persistent = True
+                    self._using_faiss = True
+                    return
+                except Exception as faiss_error:
+                    logger.warning(f"FAISS fallback also failed: {faiss_error}")
+            
+            logger.info("Falling back to in-memory Chroma store")
+            # Final fallback to in-memory store
+            self.vectorstore = Chroma(
+                collection_name=collection_name,
+                embedding_function=self.embeddings,
+            )
+            self._is_persistent = False
+            self._using_faiss = False
         
         # 병렬 처리 관리자들
         self.parallel_search_manager = ParallelSearchManager(max_concurrent=4)
@@ -144,8 +195,24 @@ If the context doesn't contain relevant information, say so clearly.""",
             
             # Add documents to vector store
             if documents:
-                self.vectorstore.add_documents(documents)
-                self.vectorstore.persist()
+                if getattr(self, '_using_faiss', False) and self.faiss_retriever:
+                    # Use FAISS
+                    await self.faiss_retriever.create_index(documents)
+                    logger.info(f"Added {len(documents)} documents to FAISS index")
+                else:
+                    # Use ChromaDB
+                    self.vectorstore.add_documents(documents)
+                    
+                    # Persist if using persistent storage
+                    if getattr(self, '_is_persistent', False):
+                        try:
+                            self.vectorstore.persist()
+                            logger.info(f"Added {len(documents)} documents to persistent ChromaDB")
+                        except Exception as persist_error:
+                            logger.warning(f"Failed to persist after adding documents: {persist_error}")
+                            logger.info(f"Added {len(documents)} documents to ChromaDB (persistence failed)")
+                    else:
+                        logger.info(f"Added {len(documents)} documents to in-memory ChromaDB")
             
             return {
                 "success": True,
@@ -368,12 +435,23 @@ If the context doesn't contain relevant information, say so clearly.""",
     ) -> List[Tuple[Document, float]]:
         """단일 쿼리 벡터 검색"""
         try:
-            # 비동기 실행을 위해 스레드풀에서 실행
-            loop = asyncio.get_event_loop()
-            results = await loop.run_in_executor(
-                None, 
-                lambda: self.vectorstore.similarity_search_with_score(query, k=k)
-            )
+            # Check if using FAISS or ChromaDB
+            if getattr(self, '_using_faiss', False) and self.faiss_retriever:
+                # Use FAISS retriever
+                loop = asyncio.get_event_loop()
+                results = await loop.run_in_executor(
+                    None, 
+                    lambda: self.faiss_retriever.search(query, k=k)
+                )
+                # Convert FAISS results to (doc, score) tuples
+                results = [(doc, 1.0 - score) for doc, score in results]  # Convert similarity to distance
+            else:
+                # Use ChromaDB
+                loop = asyncio.get_event_loop()
+                results = await loop.run_in_executor(
+                    None, 
+                    lambda: self.vectorstore.similarity_search_with_score(query, k=k)
+                )
             
             # 점수 필터링
             filtered_results = [

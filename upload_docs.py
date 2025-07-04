@@ -368,7 +368,7 @@ async def main():
     
     print("\n\n💡 웹챗에서 RAG 사용하기:")
     print("1. 서버 실행: uvicorn app.main:app --reload")
-    print("2. 웹챗 접속: http://localhost:8000/static/webchat-test.html")
+    print("2. 웹챗 접속: http://localhost:8000/static/moji-webchat-v2.htmll")
     print("3. 명령어:")
     print("   - RAG 토글을 ON으로 설정")
     print("   - 일반 질문 입력")

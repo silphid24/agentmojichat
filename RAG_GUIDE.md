@@ -1,10 +1,13 @@
-# MOJI RAG (검색 증강 생성) 가이드
+# MOJI RAG (검색 증강 생성) 가이드 (2024 최신)
 
 MOJI의 문서 지식 베이스를 활용한 RAG 시스템 사용 및 테스트 완전 가이드입니다.
 
-## 개요
+## 주요 특징
 
-MOJI의 RAG 시스템은 업로드된 문서를 참조하여 질문에 답변할 수 있게 해주며, 정확하고 출처가 명확한 응답을 제공합니다.
+- 하이브리드 검색(벡터+키워드)
+- 리랭킹 시스템, 신뢰도 점수, 출처 인용
+- 적응형 쿼리 처리, 실시간 성능 모니터링
+- WebChat v2와의 통합
 
 ## 빠른 시작
 
@@ -48,15 +51,25 @@ python upload_docs.py --incremental
 python upload_docs.py --batch-size 10
 ```
 
-### 3. RAG와 함께 서버 시작
+### 3. 서버 실행 및 RAG 활성화
 
-```bash
-# .env에서 RAG 활성화 확인
+.env 파일에 아래 항목 포함:
+```env
 RAG_ENABLED=true
-
-# 서버 시작
-uvicorn app.main:app --reload
+VECTOR_STORE_PATH=./chroma_db
+EMBEDDING_MODEL=all-MiniLM-L6-v2
+CHUNK_SIZE=1000
+CHUNK_OVERLAP=200
 ```
+
+서버 실행:
+```bash
+./run_server.sh
+```
+
+### 4. WebChat v2에서 RAG 사용
+
+- http://localhost:8000/static/moji-webchat-v2.html 접속 후 `/rag` 명령어 사용
 
 ## RAG 명령어
 
@@ -108,6 +121,117 @@ MOJI는 여러 문서의 정보를 결합할 수 있습니다:
 ```
 [faq.md:23]과 [policies.md:45]를 기반으로, 반품 절차는...
 ```
+
+### 5. 하이브리드 검색
+
+벡터 검색과 키워드 검색 결합:
+```python
+# app/rag/enhanced_rag.py에서
+enable_hybrid_search=True
+keyword_weight=0.3
+vector_weight=0.7
+```
+
+### 6. 리랭킹
+
+리랭킹 시스템을 통해 최적의 결과를 찾습니다:
+```python
+# app/rag/reranking.py에서
+rerank_enabled=True
+```
+
+### 7. 적응형 기능
+
+쿼리를 실시간으로 처리하고 성능을 모니터링합니다:
+```python
+# app/rag/adaptive_query.py에서
+adaptive_enabled=True
+```
+
+## 성능 최적화
+
+### 1. 문서 준비
+- 문서를 집중적이고 잘 구조화된 상태로 유지
+- 명확한 제목과 섹션 사용
+- 매우 큰 파일은 분할 (10MB 초과 시)
+
+### 2. 인덱싱 전략
+
+#### 기본 업로드 옵션
+```bash
+# 모든 문서 업로드
+python upload_docs.py
+
+# 특정 폴더만 업로드
+python upload_docs.py --folder policies/
+
+# 특정 파일만 업로드  
+python upload_docs.py --file guide.txt
+
+# 증분 업데이트 (변경된 파일만)
+python upload_docs.py --incremental
+
+# 배치 크기 조정
+python upload_docs.py --batch-size 5
+
+# 강제 전체 재처리
+python upload_docs.py --incremental --force
+```
+
+#### 완전 재인덱싱
+```bash
+# 벡터 스토어 완전 초기화 및 재인덱싱
+python clear_and_reload_docs.py
+```
+
+#### 문서 관리
+```bash
+# 문서 목록 조회
+python manage_docs.py list
+
+# 특정 폴더 문서 조회 (메타데이터 포함)
+python manage_docs.py list --folder policies/ --metadata
+
+# 문서 검색
+python manage_docs.py search "시스템 사양"
+
+# 시스템 통계
+python manage_docs.py stats
+
+# 고아 파일 정리
+python manage_docs.py cleanup
+
+# 백업 생성
+python manage_docs.py backup ./backup/2024-01-01/
+
+# 백업 복원
+python manage_docs.py restore ./backup/2024-01-01/
+```
+
+#### 시스템 상태 점검
+```bash
+# 전체 상태 점검
+python rag_health_check.py
+
+# JSON 형식 출력
+python rag_health_check.py --json
+
+# 결과 파일로 저장
+python rag_health_check.py --save health_report.json
+
+# 조용한 모드
+python rag_health_check.py --quiet
+```
+
+### 3. 쿼리 최적화
+- 구체적인 키워드 사용
+- 한 번에 한 가지 질문
+- 필요시 컨텍스트 포함
+
+### 4. 성능 최적화 팁
+- 문서 분할(청크) 크기 조정
+- 캐싱, 병렬 검색, 모델 예열
+- 실시간 모니터링 활용
 
 ## 테스트 시나리오
 
@@ -262,6 +386,11 @@ python rag_health_check.py --quiet
 - 한 번에 한 가지 질문
 - 필요시 컨텍스트 포함
 
+### 4. 성능 최적화 팁
+- 문서 분할(청크) 크기 조정
+- 캐싱, 병렬 검색, 모델 예열
+- 실시간 모니터링 활용
+
 ## 문제 해결
 
 ### 일반적인 문제
@@ -383,15 +512,6 @@ curl http://localhost:8000/api/rag/stats
 # OpenAI 임베딩 사용
 EMBEDDING_MODEL=text-embedding-ada-002
 EMBEDDING_PROVIDER=openai
-```
-
-### 하이브리드 검색
-벡터 검색과 키워드 검색 결합:
-```python
-# app/rag/enhanced_rag.py에서
-enable_hybrid_search=True
-keyword_weight=0.3
-vector_weight=0.7
 ```
 
 ### 다국어 지원

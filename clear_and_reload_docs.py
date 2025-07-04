@@ -228,7 +228,7 @@ async def main():
         
         print(f"\n💡 다음 단계:")
         print(f"   1. 서버 시작: uvicorn app.main:app --reload")
-        print(f"   2. 웹챗 접속: http://localhost:8000/static/webchat-test.html")
+        print(f"   2. 웹챗 접속: http://localhost:8001/static/moji-webchat-v2.html")
         print(f"   3. RAG 테스트: 토글을 ON으로 설정하고 질문하기")
         
     except Exception as e:
