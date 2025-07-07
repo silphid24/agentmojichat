@@ -142,13 +142,7 @@ async def webchat_websocket(websocket: WebSocket):
 
 @router.get("/webchat/page")
 async def get_webchat_page():
-    """Serve the full WebChat page."""
-    return FileResponse("app/static/moji-webchat-v2.html")
-
-
-@router.get("/webchat/modular")
-async def get_webchat_modular():
-    """Serve the modular WebChat page."""
+    """Serve the full WebChat page (modular version)."""
     return FileResponse("app/static/moji-webchat-v2-modular.html")
 
 
