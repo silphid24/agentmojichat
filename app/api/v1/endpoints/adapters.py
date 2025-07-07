@@ -137,7 +137,13 @@ async def webchat_websocket(websocket: WebSocket):
         # Client disconnected
         pass
     except Exception as e:
-        await websocket.close(code=1000, reason=str(e))
+        # Try to close websocket safely
+        try:
+            if websocket.client_state.name != "DISCONNECTED":
+                await websocket.close(code=1000, reason=str(e))
+        except Exception:
+            # Ignore close errors (connection might already be closed)
+            pass
 
 
 @router.get("/webchat/page")

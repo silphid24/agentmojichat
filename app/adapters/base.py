@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 class MessageType(str, Enum):
     """Message types supported across platforms."""
-    
+
     TEXT = "text"
     IMAGE = "image"
     FILE = "file"
@@ -21,11 +21,13 @@ class MessageType(str, Enum):
     CAROUSEL = "carousel"
     BUTTONS = "buttons"
     SYSTEM = "system"
+    PING = "ping"
+    PONG = "pong"
 
 
 class AttachmentType(str, Enum):
     """Attachment types for messages."""
-    
+
     IMAGE = "image"
     DOCUMENT = "document"
     AUDIO = "audio"
@@ -35,7 +37,7 @@ class AttachmentType(str, Enum):
 @dataclass
 class Attachment:
     """Message attachment."""
-    
+
     type: AttachmentType
     url: Optional[str] = None
     file_path: Optional[str] = None
@@ -49,7 +51,7 @@ class Attachment:
 @dataclass
 class Button:
     """Interactive button for messages."""
-    
+
     text: str
     value: str
     action: str = "postback"
@@ -61,7 +63,7 @@ class Button:
 @dataclass
 class Card:
     """Rich card for structured content."""
-    
+
     title: str
     subtitle: Optional[str] = None
     text: Optional[str] = None
@@ -73,7 +75,7 @@ class Card:
 @dataclass
 class Location:
     """Location data."""
-    
+
     latitude: float
     longitude: float
     title: Optional[str] = None
@@ -83,7 +85,7 @@ class Location:
 @dataclass
 class User:
     """Platform user information."""
-    
+
     id: str
     name: str
     platform: str
@@ -95,7 +97,7 @@ class User:
 @dataclass
 class Conversation:
     """Conversation context."""
-    
+
     id: str
     platform: str
     type: str = "direct"  # direct, group, channel
@@ -106,7 +108,7 @@ class Conversation:
 @dataclass
 class PlatformMessage:
     """Unified message format across platforms."""
-    
+
     id: Union[str, UUID] = field(default_factory=uuid4)
     type: MessageType = MessageType.TEXT
     text: Optional[str] = None
@@ -130,21 +132,21 @@ class PlatformMessage:
             "timestamp": self.timestamp.isoformat(),
             "metadata": self.metadata,
         }
-        
+
         if self.user:
             data["user"] = {
                 "id": self.user.id,
                 "name": self.user.name,
                 "platform": self.user.platform,
             }
-        
+
         if self.conversation:
             data["conversation"] = {
                 "id": self.conversation.id,
                 "platform": self.conversation.platform,
                 "type": self.conversation.type,
             }
-        
+
         if self.attachments:
             data["attachments"] = [
                 {
@@ -154,13 +156,13 @@ class PlatformMessage:
                 }
                 for att in self.attachments
             ]
-        
+
         if self.buttons:
             data["buttons"] = [
                 {"text": btn.text, "value": btn.value, "action": btn.action}
                 for btn in self.buttons
             ]
-        
+
         if self.cards:
             data["cards"] = [
                 {
@@ -168,72 +170,71 @@ class PlatformMessage:
                     "subtitle": card.subtitle,
                     "text": card.text,
                     "buttons": [
-                        {"text": btn.text, "value": btn.value}
-                        for btn in card.buttons
+                        {"text": btn.text, "value": btn.value} for btn in card.buttons
                     ],
                 }
                 for card in self.cards
             ]
-        
+
         return data
 
 
 class BaseAdapter(ABC):
     """Base adapter interface for platform integrations."""
-    
+
     def __init__(self, config: Dict[str, Any]):
         """Initialize adapter with configuration."""
         self.config = config
         self.platform_name = self.__class__.__name__.replace("Adapter", "").lower()
-    
+
     @abstractmethod
     async def connect(self) -> None:
         """Connect to the platform."""
         pass
-    
+
     @abstractmethod
     async def disconnect(self) -> None:
         """Disconnect from the platform."""
         pass
-    
+
     @abstractmethod
     async def send_message(self, message: PlatformMessage) -> Dict[str, Any]:
         """Send a message to the platform."""
         pass
-    
+
     @abstractmethod
     async def receive_message(self, raw_message: Dict[str, Any]) -> PlatformMessage:
         """Convert platform-specific message to unified format."""
         pass
-    
+
     @abstractmethod
     async def get_user_info(self, user_id: str) -> User:
         """Get user information from the platform."""
         pass
-    
+
     @abstractmethod
     async def get_conversation_info(self, conversation_id: str) -> Conversation:
         """Get conversation information from the platform."""
         pass
-    
+
     async def handle_error(self, error: Exception) -> None:
         """Handle platform-specific errors."""
         print(f"[{self.platform_name}] Error: {error}")
-    
+
     async def validate_message(self, message: PlatformMessage) -> bool:
         """Validate message before sending."""
         if message.type == MessageType.TEXT and not message.text:
             return False
-        
+
         if message.type == MessageType.IMAGE and not message.attachments:
             return False
-        
+
         return True
-    
+
     def format_text(self, text: str, platform_specific: bool = True) -> str:
         """Format text for the platform."""
         return text
-    
+
     def supports_feature(self, feature: str) -> bool:
         """Check if platform supports a specific feature."""
         features = {
