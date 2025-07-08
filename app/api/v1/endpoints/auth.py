@@ -5,7 +5,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Annotated
 
 from app.schemas.auth import Token, UserInDB, UserCreate, TokenRequest
-from app.core.security import verify_password, create_access_token, decode_access_token, get_password_hash
+from app.core.security import (
+    verify_password,
+    create_access_token,
+    decode_access_token,
+    get_password_hash,
+)
 from app.core.exceptions import AuthenticationError
 
 router = APIRouter()
@@ -19,7 +24,7 @@ USERS_DB = {
         "username": "admin",
         "password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",  # secret
         "email": "admin@example.com",
-        "is_active": True
+        "is_active": True,
     }
 }
 
@@ -34,7 +39,7 @@ async def login(request: TokenRequest):
             detail="Invalid credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     access_token = create_access_token(data={"sub": request.username})
     return Token(access_token=access_token)
 
@@ -46,28 +51,28 @@ async def register(user_create: UserCreate):
     if user_create.username in USERS_DB:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
+            detail="Username already registered",
         )
-    
+
     # Create new user
     user_id = len(USERS_DB) + 1
     hashed_password = get_password_hash(user_create.password)
-    
+
     new_user = {
         "id": user_id,
         "username": user_create.username,
         "password": hashed_password,
         "email": user_create.email,
-        "is_active": True
+        "is_active": True,
     }
-    
+
     USERS_DB[user_create.username] = new_user
-    
+
     return UserInDB(
         id=user_id,
         username=user_create.username,
         email=user_create.email,
-        is_active=True
+        is_active=True,
     )
 
 
@@ -80,16 +85,16 @@ async def get_current_user(
         username = payload.get("sub")
         if username is None:
             raise AuthenticationError("Invalid token")
-        
+
         user_data = USERS_DB.get(username)
         if user_data is None:
             raise AuthenticationError("User not found")
-        
+
         return UserInDB(
             id=user_data["id"],
             username=user_data["username"],
             email=user_data.get("email"),
-            is_active=user_data.get("is_active", True)
+            is_active=user_data.get("is_active", True),
         )
     except AuthenticationError as e:
         raise HTTPException(

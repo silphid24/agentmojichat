@@ -66,7 +66,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### 4. 웹챗 접속
 
-- 웹챗: http://localhost:8000/static/webchat-test.html
+- 웹챗: http://localhost:8000/static/moji-webchat-v2.html
 - API 문서: http://localhost:8000/docs
 - 상태 확인: http://localhost:8000/health
 

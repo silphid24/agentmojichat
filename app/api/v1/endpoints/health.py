@@ -12,7 +12,7 @@ router = APIRouter()
 async def health_check():
     """Health check endpoint"""
     services = {}
-    
+
     # Check database connection
     try:
         # TODO: Implement actual DB check
@@ -20,7 +20,7 @@ async def health_check():
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
         services["database"] = "unhealthy"
-    
+
     # Check Redis connection
     try:
         # TODO: Implement actual Redis check
@@ -28,8 +28,5 @@ async def health_check():
     except Exception as e:
         logger.error(f"Redis health check failed: {e}")
         services["redis"] = "unhealthy"
-    
-    return HealthCheck(
-        version=settings.app_version,
-        services=services
-    )
+
+    return HealthCheck(version=settings.app_version, services=services)

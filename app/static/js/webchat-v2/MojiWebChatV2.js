@@ -265,6 +265,7 @@ export class MojiWebChatV2 {
         
         // WebSocket events
         this.events.on('connection:open', () => {
+            console.log('WebSocket connected successfully');
             this.state.setState({ 
                 isConnected: true,
                 reconnectAttempts: 0,
@@ -273,10 +274,12 @@ export class MojiWebChatV2 {
         });
         
         this.events.on('connection:close', () => {
+            console.log('WebSocket connection closed');
             this.state.setState({ isConnected: false });
         });
         
         this.events.on('connection:error', (data) => {
+            console.error('WebSocket connection error:', data.error);
             this.state.setState({ 
                 connectionError: data.error,
                 isConnected: false
@@ -285,8 +288,28 @@ export class MojiWebChatV2 {
         });
         
         this.events.on('connection:reconnecting', (data) => {
+            console.log(`Reconnecting... attempt ${data.attempt}/${data.maxAttempts}`);
             this.state.setState({ reconnectAttempts: data.attempt });
             this.ui.updateConnectionStatus('reconnecting');
+        });
+        
+        this.events.on('connection:failed', () => {
+            console.error('WebSocket connection failed after max attempts');
+            this.state.setState({ 
+                isConnected: false,
+                connectionError: 'Connection failed'
+            });
+            this.ui.updateConnectionStatus('error');
+            
+            // 사용자에게 연결 실패 메시지 표시
+            if (this.messages) {
+                this.messages.addMessage({
+                    id: `error-${Date.now()}`,
+                    text: '서버 연결에 실패했습니다. 페이지를 새로고침해 주세요.',
+                    sender: 'system',
+                    timestamp: new Date().toISOString()
+                });
+            }
         });
         
         this.events.on('typing:update', (show) => {

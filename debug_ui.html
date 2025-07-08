@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Debug Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow">
+        <h1 class="text-xl font-bold mb-4">WebChat UI Controls Debug</h1>
+        
+        <!-- Test the exact HTML structure from the webchat -->
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+            <!-- RAG Toggle -->
+            <div class="flex items-center space-x-2">
+                <span class="text-gray-600 font-medium">문서 기반</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="rag-toggle" class="sr-only peer" checked>
+                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                </label>
+            </div>
+            
+            <!-- Temperature Slider -->
+            <div class="flex items-center space-x-2">
+                <span class="text-gray-600 font-medium">창의성:</span>
+                <span id="temp-value" class="text-blue-600 font-semibold">0.7</span>
+                <input type="range" id="temperature-slider" min="0" max="2" step="0.1" value="0.7" 
+                       class="w-16 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+            </div>
+            
+            <!-- Provider Selector -->
+            <select id="provider-selector" class="bg-white border border-gray-300 text-gray-700 text-xs rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                <option value="openai" selected>🤖 OpenAI</option>
+                <option value="anthropic">🧠 Anthropic</option>
+                <option value="custom">🖥️ Workstation LLM</option>
+                <option value="deepseek">🚀 DeepSeek</option>
+                <option value="deepseek-local">💻 DeepSeek (Local)</option>
+                <option value="exaone-local">🔮 EXAONE (Local)</option>
+            </select>
+            
+            <!-- Model Selector -->
+            <select id="model-selector" class="bg-white border border-gray-300 text-gray-700 text-xs rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer">
+                <option value="test-model">Test Model</option>
+            </select>
+        </div>
+        
+        <!-- Debug Information -->
+        <div class="mt-6 p-4 bg-gray-50 rounded">
+            <h2 class="font-semibold mb-2">Debug Info:</h2>
+            <div id="debug-info">
+                <p>Checking element visibility...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Debug the UI controls
+        function debugUI() {
+            const debugInfo = document.getElementById('debug-info');
+            const elements = {
+                'RAG Toggle': document.getElementById('rag-toggle'),
+                'Temperature Slider': document.getElementById('temperature-slider'),
+                'Temperature Value': document.getElementById('temp-value'),
+                'Provider Selector': document.getElementById('provider-selector'),
+                'Model Selector': document.getElementById('model-selector')
+            };
+            
+            let debugText = '';
+            for (const [name, element] of Object.entries(elements)) {
+                if (element) {
+                    const rect = element.getBoundingClientRect();
+                    const isVisible = rect.width > 0 && rect.height > 0 && 
+                                    window.getComputedStyle(element).display !== 'none';
+                    debugText += `✅ ${name}: Found, ${isVisible ? 'Visible' : 'Hidden'}<br>`;
+                } else {
+                    debugText += `❌ ${name}: Not found<br>`;
+                }
+            }
+            
+            debugInfo.innerHTML = debugText;
+        }
+        
+        // Test JavaScript functionality
+        function testJavaScript() {
+            console.log('Testing JavaScript functionality...');
+            
+            // Test temperature slider
+            const tempSlider = document.getElementById('temperature-slider');
+            const tempValue = document.getElementById('temp-value');
+            if (tempSlider && tempValue) {
+                tempSlider.addEventListener('input', (e) => {
+                    tempValue.textContent = parseFloat(e.target.value).toFixed(1);
+                    console.log('Temperature changed to:', e.target.value);
+                });
+            }
+            
+            // Test provider selector
+            const providerSelector = document.getElementById('provider-selector');
+            if (providerSelector) {
+                providerSelector.addEventListener('change', (e) => {
+                    console.log('Provider changed to:', e.target.value);
+                });
+            }
+            
+            // Test model selector
+            const modelSelector = document.getElementById('model-selector');
+            if (modelSelector) {
+                modelSelector.addEventListener('change', (e) => {
+                    console.log('Model changed to:', e.target.value);
+                });
+            }
+            
+            // Test RAG toggle
+            const ragToggle = document.getElementById('rag-toggle');
+            if (ragToggle) {
+                ragToggle.addEventListener('change', (e) => {
+                    console.log('RAG toggle changed to:', e.target.checked);
+                });
+            }
+        }
+        
+        // Run debug and tests when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            debugUI();
+            testJavaScript();
+            
+            // Re-check every 2 seconds for 10 seconds
+            let checks = 0;
+            const interval = setInterval(() => {
+                checks++;
+                console.log(`Debug check ${checks}:`);
+                debugUI();
+                if (checks >= 5) {
+                    clearInterval(interval);
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

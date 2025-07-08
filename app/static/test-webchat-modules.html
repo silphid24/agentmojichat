@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebChat 모듈 테스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>🤖 MOJI WebChat 모듈 테스트</h1>
+    <div id="status">테스트 시작 중...</div>
+    <div id="logs"></div>
+    
+    <script type="module">
+        const statusEl = document.getElementById('status');
+        const logsEl = document.getElementById('logs');
+        
+        function addLog(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            logsEl.appendChild(div);
+            console.log(message);
+        }
+        
+        async function testModules() {
+            try {
+                addLog('🔍 모듈 로딩 테스트 시작', 'info');
+                
+                // 1. EventEmitter 테스트
+                addLog('📡 EventEmitter 로딩 중...', 'info');
+                const { EventEmitter } = await import('/static/js/webchat-v2/core/EventEmitter.js');
+                addLog('✅ EventEmitter 로딩 성공', 'success');
+                
+                // 2. StateManager 테스트
+                addLog('📊 StateManager 로딩 중...', 'info');
+                const { StateManager, createInitialState } = await import('/static/js/webchat-v2/core/StateManager.js');
+                addLog('✅ StateManager 로딩 성공', 'success');
+                
+                // 3. ConfigManager 테스트
+                addLog('⚙️ ConfigManager 로딩 중...', 'info');
+                const { ConfigManager } = await import('/static/js/webchat-v2/modules/ConfigManager.js');
+                addLog('✅ ConfigManager 로딩 성공', 'success');
+                
+                // 4. WebSocketManager 테스트
+                addLog('🌐 WebSocketManager 로딩 중...', 'info');
+                const { WebSocketManager } = await import('/static/js/webchat-v2/modules/WebSocketManager.js');
+                addLog('✅ WebSocketManager 로딩 성공', 'success');
+                
+                // 5. UIRenderer 테스트
+                addLog('🎨 UIRenderer 로딩 중...', 'info');
+                const { UIRenderer } = await import('/static/js/webchat-v2/modules/UIRenderer.js');
+                addLog('✅ UIRenderer 로딩 성공', 'success');
+                
+                // 6. MessageHandler 테스트
+                addLog('💬 MessageHandler 로딩 중...', 'info');
+                const { MessageHandler } = await import('/static/js/webchat-v2/modules/MessageHandler.js');
+                addLog('✅ MessageHandler 로딩 성공', 'success');
+                
+                // 7. 메인 모듈 테스트
+                addLog('🚀 MojiWebChatV2 메인 모듈 로딩 중...', 'info');
+                const { MojiWebChatV2 } = await import('/static/js/webchat-v2/MojiWebChatV2.js');
+                addLog('✅ MojiWebChatV2 메인 모듈 로딩 성공', 'success');
+                
+                // 8. 인스턴스 생성 테스트
+                addLog('🔧 WebChat 인스턴스 생성 테스트...', 'info');
+                const config = {
+                    wsUrl: `ws://${window.location.host}/api/v1/adapters/webchat/ws`,
+                    userId: 'test-user',
+                    userName: 'Test User',
+                    debug: true
+                };
+                
+                const chat = new MojiWebChatV2(config);
+                addLog('✅ WebChat 인스턴스 생성 성공', 'success');
+                
+                statusEl.textContent = '🎉 모든 테스트 통과! 모듈이 정상적으로 작동합니다.';
+                statusEl.style.color = 'green';
+                
+                // 실제 페이지로 리다이렉트
+                setTimeout(() => {
+                    addLog('🔄 실제 WebChat 페이지로 이동 중...', 'info');
+                    window.location.href = '/api/v1/adapters/webchat/page';
+                }, 2000);
+                
+            } catch (error) {
+                addLog(`❌ 테스트 실패: ${error.message}`, 'error');
+                statusEl.textContent = '❌ 모듈 로딩 실패';
+                statusEl.style.color = 'red';
+                
+                // 기본 버전으로 폴백
+                setTimeout(() => {
+                    addLog('🔄 기본 WebChat 버전으로 이동 중...', 'info');
+                    window.location.href = '/static/moji-webchat-v2.html';
+                }, 3000);
+            }
+        }
+        
+        // 테스트 실행
+        testModules();
+    </script>
+</body>
+</html> 

@@ -73,23 +73,35 @@ class WebChatAdapter(BaseAdapter):
     ) -> None:
         """Handle incoming WebSocket connection."""
         await websocket.accept()
+        print("[WebChat] WebSocket connection accepted")
 
         # Generate session ID if not provided
         if not session_id:
             session_id = str(uuid.uuid4())
+            print(f"[WebChat] Generated session ID: {session_id}")
 
-        # Wait for authentication message
+        # Wait for authentication message with timeout
         try:
-            auth_data = await websocket.receive_json()
+            print("[WebChat] Waiting for authentication message...")
+            auth_data = await asyncio.wait_for(websocket.receive_json(), timeout=10.0)
+            print(f"[WebChat] Received auth data: {auth_data}")
+            
             user_id = auth_data.get("user_id", f"guest_{uuid.uuid4().hex[:8]}")
             user_name = auth_data.get("user_name", "Guest User")
-        except Exception:
+            print(f"[WebChat] Authenticated user: {user_id} ({user_name})")
+        except asyncio.TimeoutError:
+            print("[WebChat] Authentication timeout, using guest credentials")
+            user_id = f"guest_{uuid.uuid4().hex[:8]}"
+            user_name = "Guest User"
+        except Exception as e:
+            print(f"[WebChat] Authentication error: {e}, using guest credentials")
             user_id = f"guest_{uuid.uuid4().hex[:8]}"
             user_name = "Guest User"
 
         # Create connection
         connection = WebChatConnection(websocket, user_id, session_id)
         self.connections[session_id] = connection
+        print(f"[WebChat] Connection created for session: {session_id}")
 
         # Create or get conversation
         if session_id not in self.conversations:
@@ -100,6 +112,7 @@ class WebChatAdapter(BaseAdapter):
                 name=f"Chat with {user_name}",
                 metadata={"started_at": datetime.utcnow().isoformat()},
             )
+            print(f"[WebChat] Conversation created for session: {session_id}")
 
         # Send welcome message
         await self._send_system_message(
@@ -107,19 +120,34 @@ class WebChatAdapter(BaseAdapter):
         )
 
         try:
-            # Handle incoming messages
+            # Handle incoming messages with improved stability
             while True:
-                data = await websocket.receive_json()
-                
-                # Handle ping/pong messages
-                if data.get("type") == "ping":
-                    await connection.send({"type": "pong", "timestamp": datetime.utcnow().isoformat()})
-                    continue
-                elif data.get("type") == "pong":
-                    # Update last activity for pong messages
-                    connection.last_activity = datetime.utcnow()
-                    continue
-                
+                try:
+                    # WebSocket 메시지 수신 (타임아웃 추가)
+                    data = await asyncio.wait_for(websocket.receive_json(), timeout=60.0)
+                    
+                    # Handle ping/pong messages
+                    if data.get("type") == "ping":
+                        await connection.send({"type": "pong", "timestamp": datetime.utcnow().isoformat()})
+                        connection.last_activity = datetime.utcnow()
+                        continue
+                    elif data.get("type") == "pong":
+                        # Update last activity for pong messages
+                        connection.last_activity = datetime.utcnow()
+                        continue
+                    
+                except asyncio.TimeoutError:
+                    # 타임아웃 시 ping 전송으로 연결 확인
+                    try:
+                        await connection.send({"type": "ping", "timestamp": datetime.utcnow().isoformat()})
+                        continue
+                    except Exception:
+                        print("[WebChat] Connection timeout, closing...")
+                        break
+                except Exception as e:
+                    print(f"[WebChat] WebSocket receive error: {e}")
+                    break
+
                 message = await self._process_incoming_message(data, connection)
 
                 # Process message with LLM router
@@ -266,9 +294,11 @@ class WebChatAdapter(BaseAdapter):
                                         context=search_context,
                                     )
 
-                                    # Check if RAG found relevant documents
+                                    # RAG 결과 타입 체크 추가
                                     if (
-                                        rag_result.get("sources")
+                                        rag_result
+                                        and isinstance(rag_result, dict)  # 타입 체크 추가
+                                        and rag_result.get("sources")
                                         and len(rag_result.get("sources", [])) > 0
                                         and rag_result.get("answer")
                                         and "관련된 정보를 찾을 수 없습니다"
@@ -288,6 +318,10 @@ class WebChatAdapter(BaseAdapter):
                                             "search_metadata", {}
                                         )
 
+                                        # sources가 리스트가 아닌 경우 안전하게 처리
+                                        if not isinstance(sources, list):
+                                            sources = []
+                                            
                                         metadata = {
                                             "mode": "Hybrid-RAG",
                                             "confidence": confidence,
@@ -299,13 +333,29 @@ class WebChatAdapter(BaseAdapter):
                                                 "total_results", 0
                                             ),
                                         }
-
-                                        # Enhanced source info display
+                                        
+                                        # RAG 테스트를 위한 출처 정보 표시
                                         search_info = f"신뢰도: {confidence}, 출처: {len(sources)}개"
                                         if search_metadata.get("total_results"):
                                             search_info += f", 검색결과: {search_metadata['total_results']}개"
-
-                                        response_text += f"\n\n🔍 **하이브리드 검색** ({search_info})"
+                                        
+                                        # 출처 문서 이름들 추가 (안전한 처리)
+                                        source_files = []
+                                        for source in sources:
+                                            if isinstance(source, dict):
+                                                filename = source.get('filename', source.get('source', '알 수 없음'))
+                                                source_files.append(filename)
+                                            elif isinstance(source, str):
+                                                source_files.append(source)
+                                            else:
+                                                source_files.append('알 수 없음')
+                                        
+                                        source_files = list(set(source_files))  # 중복 제거
+                                        source_files_str = ", ".join(source_files[:3])  # 최대 3개만 표시
+                                        if len(source_files) > 3:
+                                            source_files_str += f" 외 {len(source_files)-3}개"
+                                        
+                                        response_text += f"\n\n📊 **RAG 정보**: {search_info}\n📄 **출처**: {source_files_str}"
 
                                         await connection.send(
                                             {
@@ -560,14 +610,14 @@ class WebChatAdapter(BaseAdapter):
             )
             print(f"[WebChat] Generated response: {response.content}")
 
-            # Add mode indicator to response
+            # Add mode indicator to response (제거됨)
             response_text = response.content
-            if mode == "LLM":
-                response_text += f"\n\n🤖 **LLM 응답** ({provider or 'default'})"
-            elif mode == "Hybrid":
-                response_text += "\n\n🔄 **하이브리드 응답** (RAG → LLM 폴백)"
-            elif mode == "Error-Fallback":
-                response_text += "\n\n⚠️ **오류 복구** (LLM 폴백)"
+            # if mode == "LLM":
+            #     response_text += f"\n\n🤖 **LLM 응답** ({provider or 'default'})"
+            # elif mode == "Hybrid":
+            #     response_text += "\n\n🔄 **하이브리드 응답** (RAG → LLM 폴백)"
+            # elif mode == "Error-Fallback":
+            #     response_text += "\n\n⚠️ **오류 복구** (LLM 폴백)"
 
             # Send response back to client
             await connection.send(

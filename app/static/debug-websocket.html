@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket 디버깅</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 5px 0; border-radius: 5px; white-space: pre-wrap; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 WebSocket 연결 디버깅</h1>
+    
+    <div>
+        <button onclick="testConnection()">연결 테스트</button>
+        <button onclick="sendMessage()">메시지 전송</button>
+        <button onclick="disconnect()">연결 종료</button>
+        <button onclick="clearLog()">로그 지우기</button>
+    </div>
+    
+    <div>
+        <input type="text" id="messageInput" placeholder="테스트 메시지 입력" value="안녕하세요">
+    </div>
+    
+    <div id="status">상태: 연결 안됨</div>
+    <div id="logs"></div>
+
+    <script>
+        let ws = null;
+        const statusEl = document.getElementById('status');
+        const logsEl = document.getElementById('logs');
+        
+        function addLog(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            logsEl.appendChild(div);
+            logsEl.scrollTop = logsEl.scrollHeight;
+            console.log(message);
+        }
+        
+        function updateStatus(status, color = 'black') {
+            statusEl.textContent = `상태: ${status}`;
+            statusEl.style.color = color;
+        }
+        
+        function testConnection() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addLog('이미 연결되어 있습니다.', 'info');
+                return;
+            }
+            
+            const wsUrl = `ws://${window.location.host}/api/v1/adapters/webchat/ws`;
+            addLog(`연결 시도: ${wsUrl}`, 'info');
+            updateStatus('연결 중...', 'orange');
+            
+            try {
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function(event) {
+                    addLog('✅ WebSocket 연결 성공!', 'success');
+                    updateStatus('연결됨', 'green');
+                    
+                    // 인증 메시지 전송
+                    const authMsg = {
+                        type: 'auth',
+                        user_id: 'debug-user',
+                        user_name: 'Debug User'
+                    };
+                    ws.send(JSON.stringify(authMsg));
+                    addLog('📤 인증 메시지 전송', 'info');
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        addLog(`📥 메시지 수신: ${JSON.stringify(data, null, 2)}`, 'success');
+                    } catch (e) {
+                        addLog(`📥 원본 메시지: ${event.data}`, 'info');
+                    }
+                };
+                
+                ws.onclose = function(event) {
+                    addLog(`🔌 연결 종료 (코드: ${event.code}, 이유: ${event.reason})`, 'error');
+                    updateStatus('연결 종료됨', 'red');
+                    ws = null;
+                };
+                
+                ws.onerror = function(error) {
+                    addLog(`❌ WebSocket 에러: ${error}`, 'error');
+                    updateStatus('에러', 'red');
+                };
+                
+            } catch (error) {
+                addLog(`❌ 연결 실패: ${error.message}`, 'error');
+                updateStatus('연결 실패', 'red');
+            }
+        }
+        
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addLog('❌ 연결되지 않음. 먼저 연결을 시도하세요.', 'error');
+                return;
+            }
+            
+            const messageText = document.getElementById('messageInput').value;
+            if (!messageText.trim()) {
+                addLog('❌ 메시지를 입력하세요.', 'error');
+                return;
+            }
+            
+            const message = {
+                type: 'text',
+                text: messageText,
+                timestamp: new Date().toISOString()
+            };
+            
+            try {
+                ws.send(JSON.stringify(message));
+                addLog(`📤 메시지 전송: ${messageText}`, 'info');
+            } catch (error) {
+                addLog(`❌ 메시지 전송 실패: ${error.message}`, 'error');
+            }
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close(1000, 'User disconnect');
+                addLog('연결 종료 요청', 'info');
+            } else {
+                addLog('연결되지 않음', 'info');
+            }
+        }
+        
+        function clearLog() {
+            logsEl.innerHTML = '';
+        }
+        
+        // 엔터키로 메시지 전송
+        document.getElementById('messageInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // 페이지 로드 시 자동 연결 테스트
+        addLog('🚀 페이지 로드됨. "연결 테스트" 버튼을 클릭하세요.', 'info');
+    </script>
+</body>
+</html> 
