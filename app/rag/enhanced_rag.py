@@ -44,8 +44,8 @@ class EnhancedRAGPipeline:
         documents_dir: str = "data/documents",
         vectordb_dir: str = "data/vectordb",
         collection_name: str = "moji_documents",
-        chunk_size: int = 1500,  # Increased for more context
-        chunk_overlap: int = 500,  # Increased for boundary preservation
+        chunk_size: int = 800,  # Optimized for better chunking quality
+        chunk_overlap: int = 150,  # Reduced overlap for efficiency
         use_faiss_fallback: bool = True,
         use_semantic_chunking: bool = True,
     ):
@@ -64,12 +64,23 @@ class EnhancedRAGPipeline:
         self.embeddings = None
         self._embeddings_initialized = False
         logger.info("Embedding model will be initialized on first use (lazy loading)")
-        # Initialize text splitters
+        # Initialize text splitters with improved separators for Korean text
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
             length_function=len,
-            separators=["\n\n", "\n", " ", ""],
+            separators=[
+                "\n\n\n",   # Multiple line breaks (section boundaries)
+                "\n\n",     # Paragraph boundaries
+                "\n",       # Line breaks
+                ". ",       # Sentence endings with space
+                "。 ",      # Korean sentence endings
+                "! ",       # Exclamations
+                "? ",       # Questions
+                "; ",       # Semicolons
+                " ",        # Spaces
+                "",         # Fallback
+            ],
         )
 
         # Defer semantic chunker initialization until first use
@@ -101,10 +112,11 @@ class EnhancedRAGPipeline:
             from app.rag.semantic_chunker import SemanticChunker, ChunkingStrategy
 
             self.semantic_chunker = SemanticChunker(
-                min_chunk_size=max(300, self.chunk_size // 5),  # Increased min size
+                min_chunk_size=max(200, self.chunk_size // 4),  # Balanced min size
                 max_chunk_size=self.chunk_size,
                 overlap_size=self.chunk_overlap,
-                similarity_threshold=0.6,  # Increased for better semantic grouping
+                similarity_threshold=0.65,  # Higher threshold for better quality
+                use_structure_hints=True,  # Enable structure-aware chunking
             )
             self.chunking_strategy = ChunkingStrategy.ADAPTIVE
             logger.info("Semantic chunker initialized successfully (lazy loading)")

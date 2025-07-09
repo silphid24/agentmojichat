@@ -61,7 +61,7 @@ class SemanticChunker:
         embedding_model: str = "all-MiniLM-L6-v2",
         min_chunk_size: int = 200,
         max_chunk_size: int = 1000,
-        similarity_threshold: float = 0.5,
+        similarity_threshold: float = 0.65,  # Higher threshold for better quality
         overlap_size: int = 50,
         use_structure_hints: bool = True,
     ):
@@ -76,13 +76,16 @@ class SemanticChunker:
         self.sentence_model = None
         self._initialize_models()
 
-        # 구조 패턴 정의
+        # 구조 패턴 정의 (한국어 개선)
         self.structure_patterns = {
             "title": re.compile(r"^#{1,6}\s+(.+)$", re.MULTILINE),
             "section": re.compile(r"^##\s+(.+)$", re.MULTILINE),
             "subsection": re.compile(r"^###\s+(.+)$", re.MULTILINE),
-            "bullet": re.compile(r"^\s*[-*+]\s+(.+)$", re.MULTILINE),
-            "number": re.compile(r"^\s*\d+\.\s+(.+)$", re.MULTILINE),
+            "bullet": re.compile(r"^\s*[-*+•]\s+(.+)$", re.MULTILINE),
+            "number": re.compile(r"^\s*\d+[.)]\s+(.+)$", re.MULTILINE),
+            "korean_title": re.compile(r"^【(.+)】$", re.MULTILINE),
+            "bracket_title": re.compile(r"^\[(.+)\]$", re.MULTILINE),
+            "colon_section": re.compile(r"^(.+):\s*$", re.MULTILINE),
         }
 
     def _initialize_models(self):
@@ -289,17 +292,19 @@ class SemanticChunker:
             return self._fixed_size_chunking(text, source_file)
 
     def _split_sentences(self, text: str) -> List[str]:
-        """문장 분할"""
+        """문장 분할 (한국어 개선)"""
         try:
             sentences = nltk.sent_tokenize(text)
             # 너무 짧은 문장 제거 및 정리
             sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
             return sentences
         except Exception as e:
-            logger.warning(f"NLTK sentence splitting failed: {e}, using simple split")
-            # 폴백: 간단한 문장 분할
-            sentences = re.split(r"[.!?]+\s+", text)
-            return [s.strip() for s in sentences if len(s.strip()) > 10]
+            logger.warning(f"NLTK sentence splitting failed: {e}, using Korean-optimized split")
+            # 한국어 최적화된 문장 분할
+            sentences = re.split(r'[.!?。]+\s+|[.!?。]+$', text)
+            # 빈 문장 제거 및 정리
+            sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
+            return sentences
 
     def _group_sentences_by_similarity(
         self, sentences: List[str], embeddings: np.ndarray
