@@ -24,11 +24,13 @@ class ChromaVectorStore(BaseVectorStore):
         super().__init__(config)
         self.embeddings = embeddings or get_embeddings(use_local=True)
 
-        # Default Chroma settings
+        # Default Chroma settings with comprehensive telemetry disabling
         self.client_settings = client_settings or Settings(
             chroma_db_impl="duckdb+parquet",
             persist_directory=config.persist_directory,
             anonymized_telemetry=False,
+            allow_reset=True,
+            is_persistent=True if config.persist_directory else False,
         )
 
         self.client = None

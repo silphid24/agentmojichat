@@ -17,6 +17,11 @@ class CachedOpenAIEmbeddings(OpenAIEmbeddings):
         super().__init__(**kwargs)
         # 캐시 통계를 별도 속성으로 관리 (Pydantic 필드와 충돌 방지)
         self.__dict__["_cache_stats"] = {"hits": 0, "misses": 0, "batch_size": 100}
+    
+    def _get_cache_key(self, text: str) -> str:
+        """캐시 키 생성"""
+        import hashlib
+        return f"embedding:{hashlib.md5(text.encode()).hexdigest()}"
 
     async def aembed_documents(self, texts: List[str]) -> List[List[float]]:
         """문서 임베딩 생성 (캐시 지원)"""
@@ -49,8 +54,19 @@ class CachedOpenAIEmbeddings(OpenAIEmbeddings):
                 batch_texts = uncached_texts[batch_start:batch_end]
                 batch_indices = uncached_indices[batch_start:batch_end]
 
-                # 실제 임베딩 생성
-                batch_embeddings = await super().aembed_documents(batch_texts)
+                # 실제 임베딩 생성 (재시도 로직 추가)
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        batch_embeddings = await super().aembed_documents(batch_texts)
+                        break
+                    except Exception as e:
+                        if attempt == max_retries - 1:
+                            logger.error(f"Failed to generate embeddings after {max_retries} attempts: {e}")
+                            raise
+                        else:
+                            logger.warning(f"Embedding attempt {attempt + 1} failed: {e}. Retrying...")
+                            await asyncio.sleep(2 ** attempt)  # Exponential backoff
 
                 # 결과 저장 및 캐시
                 for j, (embedding, original_idx) in enumerate(

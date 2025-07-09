@@ -1,8 +1,8 @@
-# RAG 평가 시스템 사용 가이드 (v2.0)
+# RAG 평가 시스템 사용 가이드 (v2.1)
 
 MOJI AI Agent의 RAG 시스템 성능을 평가하고 개선하기 위한 종합 가이드입니다.
 
-**최신 업데이트 (2025-01-07)**: 품질 중심 최적화 반영, 의미론적 청킹, 하이브리드 검색 가중치 조정
+**최신 업데이트 (2025-01-07)**: 청킹 품질 평가, Vector DB 성능 평가, 종합 평가 시스템 추가
 
 ## 📋 목차
 
@@ -11,23 +11,25 @@ MOJI AI Agent의 RAG 시스템 성능을 평가하고 개선하기 위한 종합
 3. [주요 구성 요소](#주요-구성-요소)
 4. [사용법](#사용법)
 5. [평가 메트릭](#평가-메트릭)
-6. [결과 해석](#결과-해석)
-7. [개선 방안](#개선-방안)
-8. [최신 RAG 구성](#최신-rag-구성)
-9. [고급 사용법](#고급-사용법)
-10. [문제 해결](#문제-해결)
+6. [종합 평가 시스템](#종합-평가-시스템)
+7. [결과 해석](#결과-해석)
+8. [개선 방안](#개선-방안)
+9. [최신 RAG 구성](#최신-rag-구성)
+10. [고급 사용법](#고급-사용법)
+11. [문제 해결](#문제-해결)
 
 ## 🎯 개요
 
 RAG 평가 시스템은 다음과 같은 기능을 제공합니다:
 
 - **자동화된 성능 평가**: RAGAS 메트릭을 사용한 객관적 성능 측정
+- **청킹 품질 평가**: 의미적 일관성, 경계 품질, 정보 커버리지 분석
+- **Vector DB 성능 평가**: 인덱스 품질, 검색 정확도, 메모리 효율성 측정
 - **시각적 분석**: 차트와 그래프를 통한 직관적 결과 확인
+- **종합 리포트**: HTML 기반 통합 대시보드
 - **개선 추천**: AI 기반 성능 개선 방안 제시
 - **배치 처리**: 대량 쿼리 동시 평가
 - **캐싱 지원**: 효율적인 재평가
-- **품질 중심 평가**: 응답 시간보다 답변 품질을 우선시하는 평가 기준
-- **의미론적 청킹**: 문맥을 고려한 고급 문서 분할 평가
 
 ## 🔧 설치 및 설정
 
@@ -120,9 +122,31 @@ RAG 시스템의 핵심 평가 엔진입니다.
 - 성능 분석
 - 개선 추천 생성
 
-### 3. 평가 데모 스크립트 (`scripts/evaluation_demo.py`)
+### 3. 청킹 품질 평가기 (`app/evaluation/chunk_quality_evaluator.py`)
 
-완전 자동화된 평가 데모를 제공합니다.
+**NEW**: 문서 청킹의 품질을 종합적으로 평가합니다.
+
+**주요 기능:**
+- 의미적 일관성 측정
+- 청크 경계 품질 분석
+- 정보 커버리지 평가
+- 구조 보존 분석
+- 크기 일관성 검증
+
+### 4. Vector DB 성능 평가기 (`app/evaluation/vectordb_performance_evaluator.py`)
+
+**NEW**: 벡터 데이터베이스의 성능을 다각도로 분석합니다.
+
+**주요 기능:**
+- 인덱스 품질 분석
+- 검색 성능 측정
+- 메모리 효율성 평가
+- 확장성 테스트
+- 일관성 검증
+
+### 5. 평가 데모 스크립트 (`scripts/evaluation_demo.py`)
+
+**업데이트**: 종합 평가 기능이 추가되었습니다.
 
 ## 🚀 사용법
 
@@ -224,6 +248,131 @@ results, summary = await evaluator.evaluate_dataset(
     queries=custom_queries,
     ground_truths=ground_truths
 )
+```
+
+### 3. 종합 평가 실행 (NEW)
+
+```bash
+# 청킹 품질 + Vector DB 성능 + RAGAS 종합 평가
+python scripts/evaluation_demo.py comprehensive
+```
+
+### 4. 프로그래밍 방식 사용
+
+#### 청킹 품질 평가
+
+```python
+from app.evaluation.chunk_quality_evaluator import ChunkQualityEvaluator
+from langchain.schema import Document
+
+async def evaluate_chunk_quality():
+    # 평가기 초기화
+    evaluator = ChunkQualityEvaluator(
+        embedding_model="all-MiniLM-L6-v2",
+        optimal_chunk_size=1000,
+        size_tolerance=0.3
+    )
+    
+    # 청크 문서들 (실제 환경에서는 벡터 스토어에서 가져옴)
+    chunks = [
+        Document(page_content="첫 번째 청크 내용...", metadata={"chunk_id": "1"}),
+        Document(page_content="두 번째 청크 내용...", metadata={"chunk_id": "2"}),
+        # ... 더 많은 청크들
+    ]
+    
+    # 원본 텍스트
+    original_text = "전체 원본 문서 내용..."
+    
+    # 품질 평가 실행
+    metrics = evaluator.evaluate_chunks(chunks, original_text)
+    
+    print(f"종합 품질 점수: {metrics.overall_quality:.3f}")
+    print(f"의미적 일관성: {metrics.semantic_coherence:.3f}")
+    print(f"경계 품질: {metrics.boundary_quality:.3f}")
+    print(f"정보 커버리지: {metrics.information_coverage:.3f}")
+    
+    # 상세 리포트 생성
+    report = evaluator.generate_quality_report(metrics, chunks)
+    print(f"품질 등급: {report['summary']['quality_grade']}")
+    
+    return metrics, report
+```
+
+#### Vector DB 성능 평가
+
+```python
+from app.evaluation.vectordb_performance_evaluator import VectorDBPerformanceEvaluator
+from app.rag.enhanced_rag import rag_pipeline
+
+async def evaluate_vectordb_performance():
+    # 평가기 초기화
+    evaluator = VectorDBPerformanceEvaluator(
+        vectorstore=rag_pipeline.vectorstore,
+        test_queries=[
+            "시스템 설치 방법",
+            "API 사용법",
+            "에러 해결 방법",
+            "성능 최적화"
+        ],
+        k_values=[1, 3, 5, 10]
+    )
+    
+    # 성능 평가 실행
+    metrics = evaluator.evaluate_performance(detailed_analysis=True)
+    
+    print(f"종합 성능 점수: {metrics.overall_performance:.3f}")
+    print(f"인덱스 품질: {metrics.index_quality:.3f}")
+    print(f"검색 정확도: {metrics.search_accuracy:.3f}")
+    print(f"검색 속도: {metrics.search_speed:.3f}")
+    print(f"메모리 효율성: {metrics.memory_efficiency:.3f}")
+    
+    # 상세 리포트 생성
+    report = evaluator.generate_performance_report(metrics)
+    print(f"성능 등급: {report['summary']['performance_grade']}")
+    
+    return metrics, report
+```
+
+#### 종합 평가 (통합)
+
+```python
+async def comprehensive_evaluation():
+    """청킹 품질 + Vector DB 성능 + RAGAS 종합 평가"""
+    
+    # 1. 청킹 품질 평가
+    chunk_evaluator = ChunkQualityEvaluator()
+    chunk_metrics = chunk_evaluator.evaluate_chunks(chunks, original_text)
+    
+    # 2. Vector DB 성능 평가  
+    vectordb_evaluator = VectorDBPerformanceEvaluator(
+        vectorstore=rag_pipeline.vectorstore
+    )
+    vectordb_metrics = vectordb_evaluator.evaluate_performance()
+    
+    # 3. RAGAS 평가
+    ragas_evaluator = RAGASEvaluator(rag_pipeline=rag_pipeline)
+    results, summary = await ragas_evaluator.evaluate_dataset(queries)
+    
+    # 4. 종합 리포트 생성
+    dashboard = MetricsDashboard()
+    enhanced_report = {
+        "chunk_quality": {
+            "metrics": chunk_metrics.to_dict(),
+            "grade": "Excellent"  # 실제로는 계산됨
+        },
+        "vectordb_performance": {
+            "metrics": vectordb_metrics.to_dict(), 
+            "grade": "Good"  # 실제로는 계산됨
+        }
+    }
+    
+    # 종합 HTML 리포트 생성
+    html_path = dashboard.create_comprehensive_html_report(
+        results, summary, enhanced_report
+    )
+    
+    print(f"종합 리포트: {html_path}")
+    return enhanced_report
 ```
 
 ## 📊 평가 메트릭
@@ -395,7 +544,7 @@ PERFORMANCE_THRESHOLDS = {
 #### 1. RAG 상태 점검 (`rag_health_check.py`)
 ```bash
 # 새로운 점검 항목들
-python rag_health_check.py
+python /tools/rag_health_check.py
 
 # 확인 사항:
 # - 의미론적 청킹 상태
@@ -406,7 +555,7 @@ python rag_health_check.py
 
 #### 2. 문서 업로드 도구 (`upload_docs.py`)
 ```bash
-python upload_docs.py
+python /tools/upload_docs.py
 
 # 새로운 통계 표시:
 # - 청크 중복 정보
@@ -416,7 +565,7 @@ python upload_docs.py
 
 #### 3. 벡터 DB 관리자 (`vector_db_manager.py`)
 ```bash
-python vector_db_manager.py stats
+python /tools/vector_db_manager.py stats
 
 # 한글화된 통계 표시:
 # - 총 문서 수: XX개
@@ -619,4 +768,4 @@ grep ERROR logs/evaluation.log
 
 ---
 
-*이 가이드는 MOJI AI Agent RAG 평가 시스템 v2.0을 기준으로 작성되었습니다. (품질 중심 최적화 반영)*
+*이 가이드는 MOJI AI Agent RAG 평가 시스템 v2.1을 기준으로 작성되었습니다. (품질 중심 최적화 반영)*

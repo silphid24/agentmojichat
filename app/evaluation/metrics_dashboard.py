@@ -5,8 +5,6 @@ RAG 메트릭 대시보드
 
 import json
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 from datetime import datetime
@@ -14,6 +12,15 @@ import numpy as np
 
 from app.core.logging import logger
 from .ragas_evaluator import EvaluationResult, EvaluationSummary
+
+# Optional visualization dependencies
+try:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    VISUALIZATION_AVAILABLE = True
+except ImportError:
+    VISUALIZATION_AVAILABLE = False
+    logger.warning("matplotlib/seaborn not available, visualization features disabled")
 
 
 class MetricsDashboard:
@@ -23,9 +30,15 @@ class MetricsDashboard:
         self.results_dir = Path(results_dir)
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
-        # 시각화 설정
-        plt.style.use("seaborn-v0_8")
-        sns.set_palette("husl")
+        # 시각화 설정 (if available)
+        if VISUALIZATION_AVAILABLE:
+            try:
+                plt.style.use("seaborn-v0_8")
+                sns.set_palette("husl")
+            except:
+                # Fallback to default style if seaborn-v0_8 not available
+                plt.style.use("default")
+                sns.set_palette("husl")
 
     def generate_report(
         self,
@@ -47,9 +60,11 @@ class MetricsDashboard:
             "recommendations": self._generate_recommendations(results, summary),
         }
 
-        if save_plots:
+        if save_plots and VISUALIZATION_AVAILABLE:
             plot_paths = self._generate_plots(results, summary)
             report["plot_paths"] = plot_paths
+        elif save_plots and not VISUALIZATION_AVAILABLE:
+            logger.warning("Visualization not available, skipping plot generation")
 
         # 리포트 저장
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -238,6 +253,10 @@ class MetricsDashboard:
         self, results: List[EvaluationResult], summary: EvaluationSummary
     ) -> Dict[str, str]:
         """시각화 생성"""
+
+        if not VISUALIZATION_AVAILABLE:
+            logger.warning("Visualization not available, returning empty plot paths")
+            return {}
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         plot_paths = {}
@@ -559,3 +578,313 @@ class MetricsDashboard:
 
         logger.info(f"HTML report generated: {html_path}")
         return str(html_path)
+
+    def create_comprehensive_html_report(
+        self,
+        results: List[EvaluationResult],
+        summary: EvaluationSummary,
+        enhanced_report: Dict[str, Any],
+    ) -> str:
+        """종합 HTML 리포트 생성 (청킹 품질 및 Vector DB 성능 포함)"""
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # 기본 HTML 구조
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Comprehensive RAG Evaluation Report - {timestamp}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; background-color: #f8f9fa; }}
+                .container {{ max-width: 1200px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }}
+                .section {{ margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px; }}
+                .metric-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }}
+                .metric-card {{ background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
+                .metric-value {{ font-size: 2em; font-weight: bold; margin: 10px 0; }}
+                .good {{ color: #28a745; }}
+                .warning {{ color: #ffc107; }}
+                .bad {{ color: #dc3545; }}
+                table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
+                th, td {{ border: 1px solid #ddd; padding: 12px; text-align: left; }}
+                th {{ background-color: #e9ecef; font-weight: bold; }}
+                tr:nth-child(even) {{ background-color: #f8f9fa; }}
+                .plot {{ text-align: center; margin: 20px 0; }}
+                .recommendations {{ background-color: #e7f3ff; border-left: 4px solid #007bff; padding: 20px; margin: 20px 0; }}
+                .quality-badge {{ display: inline-block; padding: 5px 15px; border-radius: 20px; color: white; font-weight: bold; margin: 5px; }}
+                .excellent {{ background-color: #28a745; }}
+                .very-good {{ background-color: #17a2b8; }}
+                .good-badge {{ background-color: #20c997; }}
+                .fair {{ background-color: #ffc107; color: #212529; }}
+                .poor {{ background-color: #fd7e14; }}
+                .very-poor {{ background-color: #dc3545; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🚀 Comprehensive RAG Evaluation Report</h1>
+                    <p>Generated on: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+                    <p>Total Queries Evaluated: {summary.total_queries}</p>
+                </div>
+        """
+
+        # Executive Summary
+        overall_score = (summary.avg_faithfulness + summary.avg_answer_relevancy + summary.avg_context_precision) / 3
+        html_content += f"""
+                <div class="section">
+                    <h2>📊 Executive Summary</h2>
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <h3>Overall RAG Performance</h3>
+                            <div class="metric-value {'good' if overall_score > 0.7 else 'warning' if overall_score > 0.5 else 'bad'}">
+                                {overall_score:.2f}
+                            </div>
+                            <p>{"Excellent" if overall_score > 0.8 else "Good" if overall_score > 0.7 else "Fair" if overall_score > 0.5 else "Needs Improvement"}</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Average Response Time</h3>
+                            <div class="metric-value {'good' if summary.avg_response_time < 2 else 'warning' if summary.avg_response_time < 5 else 'bad'}">
+                                {summary.avg_response_time:.2f}s
+                            </div>
+                            <p>{"Fast" if summary.avg_response_time < 2 else "Acceptable" if summary.avg_response_time < 5 else "Slow"}</p>
+                        </div>
+        """
+
+        # 청킹 품질 카드 추가
+        if enhanced_report.get("chunk_quality"):
+            chunk_quality = enhanced_report["chunk_quality"]
+            chunk_score = chunk_quality["metrics"].get("overall_quality", 0)
+            chunk_grade = chunk_quality.get("grade", "Unknown")
+            
+            html_content += f"""
+                        <div class="metric-card">
+                            <h3>🧩 Chunk Quality</h3>
+                            <div class="metric-value {'good' if chunk_score > 0.7 else 'warning' if chunk_score > 0.5 else 'bad'}">
+                                {chunk_score:.2f}
+                            </div>
+                            <p><span class="quality-badge {chunk_grade.lower().replace(' ', '-')}">{chunk_grade}</span></p>
+                        </div>
+            """
+
+        # Vector DB 성능 카드 추가
+        if enhanced_report.get("vectordb_performance"):
+            vectordb_perf = enhanced_report["vectordb_performance"]
+            vectordb_score = vectordb_perf["metrics"].get("overall_performance", 0)
+            vectordb_grade = vectordb_perf.get("grade", "Unknown")
+            
+            html_content += f"""
+                        <div class="metric-card">
+                            <h3>🗃️ Vector DB Performance</h3>
+                            <div class="metric-value {'good' if vectordb_score > 0.7 else 'warning' if vectordb_score > 0.5 else 'bad'}">
+                                {vectordb_score:.2f}
+                            </div>
+                            <p><span class="quality-badge {vectordb_grade.lower().replace(' ', '-')}">{vectordb_grade}</span></p>
+                        </div>
+            """
+
+        html_content += """
+                    </div>
+                </div>
+        """
+
+        # RAGAS 메트릭 상세
+        html_content += f"""
+                <div class="section">
+                    <h2>📈 RAGAS Evaluation Metrics</h2>
+                    <table>
+                        <tr><th>Metric</th><th>Score</th><th>Status</th><th>Description</th></tr>
+                        <tr>
+                            <td><strong>Faithfulness</strong></td>
+                            <td>{summary.avg_faithfulness:.3f}</td>
+                            <td class="{'good' if summary.avg_faithfulness > 0.7 else 'warning' if summary.avg_faithfulness > 0.5 else 'bad'}">
+                                {'Good' if summary.avg_faithfulness > 0.7 else 'Warning' if summary.avg_faithfulness > 0.5 else 'Poor'}
+                            </td>
+                            <td>How factually accurate the generated answer is</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Answer Relevancy</strong></td>
+                            <td>{summary.avg_answer_relevancy:.3f}</td>
+                            <td class="{'good' if summary.avg_answer_relevancy > 0.7 else 'warning' if summary.avg_answer_relevancy > 0.5 else 'bad'}">
+                                {'Good' if summary.avg_answer_relevancy > 0.7 else 'Warning' if summary.avg_answer_relevancy > 0.5 else 'Poor'}
+                            </td>
+                            <td>How relevant the answer is to the given question</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Context Precision</strong></td>
+                            <td>{summary.avg_context_precision:.3f}</td>
+                            <td class="{'good' if summary.avg_context_precision > 0.7 else 'warning' if summary.avg_context_precision > 0.5 else 'bad'}">
+                                {'Good' if summary.avg_context_precision > 0.7 else 'Warning' if summary.avg_context_precision > 0.5 else 'Poor'}
+                            </td>
+                            <td>How precise and relevant the retrieved context is</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Context Recall</strong></td>
+                            <td>{summary.avg_context_recall:.3f}</td>
+                            <td class="{'good' if summary.avg_context_recall > 0.7 else 'warning' if summary.avg_context_recall > 0.5 else 'bad'}">
+                                {'Good' if summary.avg_context_recall > 0.7 else 'Warning' if summary.avg_context_recall > 0.5 else 'Poor'}
+                            </td>
+                            <td>How much relevant context was successfully retrieved</td>
+                        </tr>
+                    </table>
+                </div>
+        """
+
+        # 청킹 품질 상세 분석
+        if enhanced_report.get("chunk_quality"):
+            chunk_metrics = enhanced_report["chunk_quality"]["metrics"]
+            html_content += f"""
+                <div class="section">
+                    <h2>🧩 Chunk Quality Analysis</h2>
+                    <table>
+                        <tr><th>Metric</th><th>Score</th><th>Status</th><th>Description</th></tr>
+                        <tr>
+                            <td><strong>Semantic Coherence</strong></td>
+                            <td>{chunk_metrics.get('semantic_coherence', 0):.3f}</td>
+                            <td class="{'good' if chunk_metrics.get('semantic_coherence', 0) > 0.7 else 'warning' if chunk_metrics.get('semantic_coherence', 0) > 0.5 else 'bad'}">
+                                {'Good' if chunk_metrics.get('semantic_coherence', 0) > 0.7 else 'Warning' if chunk_metrics.get('semantic_coherence', 0) > 0.5 else 'Poor'}
+                            </td>
+                            <td>How semantically coherent content within chunks is</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Boundary Quality</strong></td>
+                            <td>{chunk_metrics.get('boundary_quality', 0):.3f}</td>
+                            <td class="{'good' if chunk_metrics.get('boundary_quality', 0) > 0.7 else 'warning' if chunk_metrics.get('boundary_quality', 0) > 0.5 else 'bad'}">
+                                {'Good' if chunk_metrics.get('boundary_quality', 0) > 0.7 else 'Warning' if chunk_metrics.get('boundary_quality', 0) > 0.5 else 'Poor'}
+                            </td>
+                            <td>How well chunks respect natural text boundaries</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Information Coverage</strong></td>
+                            <td>{chunk_metrics.get('information_coverage', 0):.3f}</td>
+                            <td class="{'good' if chunk_metrics.get('information_coverage', 0) > 0.7 else 'warning' if chunk_metrics.get('information_coverage', 0) > 0.5 else 'bad'}">
+                                {'Good' if chunk_metrics.get('information_coverage', 0) > 0.7 else 'Warning' if chunk_metrics.get('information_coverage', 0) > 0.5 else 'Poor'}
+                            </td>
+                            <td>How well chunks cover the original information</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Size Consistency</strong></td>
+                            <td>{chunk_metrics.get('size_consistency', 0):.3f}</td>
+                            <td class="{'good' if chunk_metrics.get('size_consistency', 0) > 0.7 else 'warning' if chunk_metrics.get('size_consistency', 0) > 0.5 else 'bad'}">
+                                {'Good' if chunk_metrics.get('size_consistency', 0) > 0.7 else 'Warning' if chunk_metrics.get('size_consistency', 0) > 0.5 else 'Poor'}
+                            </td>
+                            <td>How consistent chunk sizes are across the dataset</td>
+                        </tr>
+                    </table>
+                </div>
+            """
+
+        # Vector DB 성능 상세 분석
+        if enhanced_report.get("vectordb_performance"):
+            vectordb_metrics = enhanced_report["vectordb_performance"]["metrics"]
+            html_content += f"""
+                <div class="section">
+                    <h2>🗃️ Vector Database Performance Analysis</h2>
+                    <table>
+                        <tr><th>Metric</th><th>Score</th><th>Status</th><th>Description</th></tr>
+                        <tr>
+                            <td><strong>Index Quality</strong></td>
+                            <td>{vectordb_metrics.get('index_quality', 0):.3f}</td>
+                            <td class="{'good' if vectordb_metrics.get('index_quality', 0) > 0.7 else 'warning' if vectordb_metrics.get('index_quality', 0) > 0.5 else 'bad'}">
+                                {'Good' if vectordb_metrics.get('index_quality', 0) > 0.7 else 'Warning' if vectordb_metrics.get('index_quality', 0) > 0.5 else 'Poor'}
+                            </td>
+                            <td>Quality of vector distribution and clustering</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Search Accuracy</strong></td>
+                            <td>{vectordb_metrics.get('search_accuracy', 0):.3f}</td>
+                            <td class="{'good' if vectordb_metrics.get('search_accuracy', 0) > 0.7 else 'warning' if vectordb_metrics.get('search_accuracy', 0) > 0.5 else 'bad'}">
+                                {'Good' if vectordb_metrics.get('search_accuracy', 0) > 0.7 else 'Warning' if vectordb_metrics.get('search_accuracy', 0) > 0.5 else 'Poor'}
+                            </td>
+                            <td>Accuracy of similarity search results</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Search Speed</strong></td>
+                            <td>{vectordb_metrics.get('search_speed', 0):.3f}</td>
+                            <td class="{'good' if vectordb_metrics.get('search_speed', 0) > 0.7 else 'warning' if vectordb_metrics.get('search_speed', 0) > 0.5 else 'bad'}">
+                                {'Good' if vectordb_metrics.get('search_speed', 0) > 0.7 else 'Warning' if vectordb_metrics.get('search_speed', 0) > 0.5 else 'Poor'}
+                            </td>
+                            <td>Speed of query processing and retrieval</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Memory Efficiency</strong></td>
+                            <td>{vectordb_metrics.get('memory_efficiency', 0):.3f}</td>
+                            <td class="{'good' if vectordb_metrics.get('memory_efficiency', 0) > 0.7 else 'warning' if vectordb_metrics.get('memory_efficiency', 0) > 0.5 else 'bad'}">
+                                {'Good' if vectordb_metrics.get('memory_efficiency', 0) > 0.7 else 'Warning' if vectordb_metrics.get('memory_efficiency', 0) > 0.5 else 'Poor'}
+                            </td>
+                            <td>Efficiency of memory usage for vector storage</td>
+                        </tr>
+                    </table>
+                </div>
+            """
+
+        # 추천사항
+        recommendations = enhanced_report.get("recommendations", [])
+        if recommendations:
+            html_content += """
+                <div class="section">
+                    <h2>💡 Comprehensive Recommendations</h2>
+                    <div class="recommendations">
+                        <h3>Key Areas for Improvement:</h3>
+                        <ul>
+            """
+            for rec in recommendations:
+                html_content += f"<li>{rec}</li>"
+            
+            html_content += """
+                        </ul>
+                    </div>
+                </div>
+            """
+
+        # 기술적 상세정보
+        html_content += f"""
+                <div class="section">
+                    <h2>🔧 Technical Details</h2>
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <h3>Evaluation Configuration</h3>
+                            <p><strong>Total Queries:</strong> {summary.total_queries}</p>
+                            <p><strong>Evaluation Time:</strong> {summary.total_evaluation_time:.2f}s</p>
+                            <p><strong>Average Response Time:</strong> {summary.avg_response_time:.2f}s</p>
+                        </div>
+        """
+
+        if enhanced_report.get("chunk_quality", {}).get("report", {}).get("chunk_statistics"):
+            chunk_stats = enhanced_report["chunk_quality"]["report"]["chunk_statistics"]
+            html_content += f"""
+                        <div class="metric-card">
+                            <h3>Chunk Statistics</h3>
+                            <p><strong>Total Chunks:</strong> {enhanced_report["chunk_quality"]["report"]["summary"].get("total_chunks", "N/A")}</p>
+                            <p><strong>Avg Chunk Size:</strong> {chunk_stats.get("avg_chunk_size", 0):.0f} chars</p>
+                            <p><strong>Size Range:</strong> {chunk_stats.get("min_size", 0):.0f} - {chunk_stats.get("max_size", 0):.0f}</p>
+                        </div>
+            """
+
+        if enhanced_report.get("vectordb_performance", {}).get("report", {}).get("technical_details"):
+            tech_details = enhanced_report["vectordb_performance"]["report"]["technical_details"]
+            html_content += f"""
+                        <div class="metric-card">
+                            <h3>Vector DB Stats</h3>
+                            <p><strong>Total Documents:</strong> {tech_details.get("index_stats", {}).get("document_count", "N/A")}</p>
+                            <p><strong>Query Throughput:</strong> {vectordb_metrics.get("query_throughput", 0):.1f} queries/sec</p>
+                            <p><strong>Embedding Dimension:</strong> {tech_details.get("index_stats", {}).get("embedding_dimension", "N/A")}</p>
+                        </div>
+            """
+
+        html_content += """
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        # HTML 파일 저장
+        report_path = self.results_dir / f"comprehensive_evaluation_report_{timestamp}.html"
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+        logger.info(f"Comprehensive HTML report saved to: {report_path}")
+        return str(report_path)

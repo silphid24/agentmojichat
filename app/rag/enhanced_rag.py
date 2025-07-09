@@ -130,14 +130,14 @@ class EnhancedRAGPipeline:
             logger.warning(
                 f"Failed to get optimized embedding model, using fallback: {e}"
             )
-            from app.core.cached_embeddings import CachedOpenAIEmbeddings
+            from langchain_openai import OpenAIEmbeddings
             from app.core.config import settings
 
             api_key = settings.openai_api_key or settings.llm_api_key
-            self.embeddings = CachedOpenAIEmbeddings(
-                openai_api_key=api_key, model="text-embedding-3-small"
+            self.embeddings = OpenAIEmbeddings(
+                api_key=api_key, model="text-embedding-3-small"
             )
-            logger.info("Using fallback embedding model (lazy loading)")
+            logger.info("Using basic OpenAI embedding model (lazy loading)")
             self._embeddings_initialized = True
 
     def _initialize_vectorstore(self):
@@ -158,11 +158,22 @@ class EnhancedRAGPipeline:
 
             os.chmod(str(persist_dir), 0o755)
 
-            # Initialize with persistent storage
+            # Initialize with persistent storage and telemetry disabled
+            import chromadb
+            from chromadb.config import Settings
+            
+            # Create ChromaDB client with telemetry disabled
+            client_settings = Settings(
+                anonymized_telemetry=False,
+                allow_reset=True,
+                is_persistent=True,
+            )
+            
             self.vectorstore = Chroma(
                 collection_name=self.collection_name,
                 embedding_function=self.embeddings,
                 persist_directory=str(persist_dir),
+                client_settings=client_settings,
             )
 
             logger.info(
@@ -312,20 +323,11 @@ Chain-of-Thought 추론을 사용하여 체계적으로 답변을 생성하세�
                     # Use ChromaDB
                     self.vectorstore.add_documents(filtered_documents)
 
-                    # Persist if using persistent storage
+                    # Note: ChromaDB 0.4.x+ automatically persists documents
                     if getattr(self, "_is_persistent", False):
-                        try:
-                            self.vectorstore.persist()
-                            logger.info(
-                                f"Added {len(filtered_documents)} documents to persistent ChromaDB"
-                            )
-                        except Exception as persist_error:
-                            logger.warning(
-                                f"Failed to persist after adding documents: {persist_error}"
-                            )
-                            logger.info(
-                                f"Added {len(filtered_documents)} documents to ChromaDB (persistence failed)"
-                            )
+                        logger.info(
+                            f"Added {len(filtered_documents)} documents to persistent ChromaDB"
+                        )
                     else:
                         logger.info(
                             f"Added {len(filtered_documents)} documents to in-memory ChromaDB"
